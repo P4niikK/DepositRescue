@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { pool, AUTHOR } from "@/lib/cockpit/db";
+import { pool } from "@/lib/cockpit/db";
+import { whoFromRequest } from "@/lib/cockpit/who";
 import { complete, parseJsonReply, MODEL_OPUS } from "@/lib/cockpit/claude";
 import { EXPERT_SPECS, synthesizerSystem } from "@/lib/cockpit/experts";
 import { decisionsBlock, appendDecision } from "@/lib/cockpit/decisions";
@@ -107,11 +108,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "pick 1 to 5 experts" }, { status: 400 });
     }
 
+    const who = whoFromRequest(req);
     const { rows: initial } = await pool.query(
       `INSERT INTO agent_asks (author, prompt, experts, synthesize, status, data)
        VALUES ($1, $2, $3, $4, 'running', '{"answers":[]}'::jsonb)
        RETURNING id`,
-      [AUTHOR, prompt, validExperts, synthesizeFlag]
+      [who, prompt, validExperts, synthesizeFlag]
     );
     const askId = initial[0].id as string;
     const cwd = sessionDir("ask", askId);

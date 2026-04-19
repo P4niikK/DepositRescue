@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { pool, AUTHOR } from "@/lib/cockpit/db";
+import { pool } from "@/lib/cockpit/db";
+import { whoFromRequest } from "@/lib/cockpit/who";
 
 export const dynamic = "force-dynamic";
 
@@ -41,11 +42,12 @@ export async function POST(req: Request) {
     if (!task) {
       return NextResponse.json({ error: "task required" }, { status: 400 });
     }
+    const who = whoFromRequest(req);
     const { rows } = await pool.query(
       `INSERT INTO agent_journal (author, kind, task, notes, files)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, ts, author, kind, task, notes, files`,
-      [AUTHOR, kind, task, notes, files]
+      [who, kind, task, notes, files]
     );
     return NextResponse.json({ entry: rows[0] });
   } catch (e) {

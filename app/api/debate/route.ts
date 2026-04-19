@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { pool, AUTHOR } from "@/lib/cockpit/db";
+import { pool } from "@/lib/cockpit/db";
+import { whoFromRequest } from "@/lib/cockpit/who";
 import {
   pickExperts, runRound, runJudge, runSynthesis, saveDebate, type DebateData,
 } from "@/lib/cockpit/debate-flow";
@@ -52,10 +53,11 @@ export async function POST(req: Request) {
       error: null,
     };
 
+    const who = whoFromRequest(req);
     const { rows } = await pool.query(
       `INSERT INTO agent_debates (author, prompt, status, round, include_devil, max_rounds, data)
        VALUES ($1, $2, 'live', 0, $3, $4, $5::jsonb) RETURNING *`,
-      [AUTHOR, prompt, includeDevil, maxRounds, initialData]
+      [who, prompt, includeDevil, maxRounds, initialData]
     );
     let debate = rows[0];
 

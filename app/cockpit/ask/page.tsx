@@ -5,6 +5,7 @@ import { EXPERTS, type ExpertId, USERS, type UserId } from "@/lib/cockpit/data";
 import { cn } from "@/lib/cockpit/utils";
 import { timeAgo } from "@/lib/cockpit/format";
 import { ArtifactsPanel } from "@/components/cockpit/artifacts-panel";
+import { useWho } from "@/components/cockpit/who-provider";
 
 type Answer = {
   expert: ExpertId;
@@ -25,6 +26,7 @@ type Ask = {
 };
 
 export default function AskPage() {
+  const { fetchAs } = useWho();
   const [history, setHistory] = useState<Ask[]>([]);
   const [selected, setSelected] = useState<ExpertId[]>(["arq", "product"]);
   const [synth, setSynth] = useState(true);
@@ -35,14 +37,14 @@ export default function AskPage() {
 
   const loadHistory = useCallback(async () => {
     try {
-      const res = await fetch("/api/ask?limit=20", { cache: "no-store" });
+      const res = await fetchAs("/api/ask?limit=20", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { asks } = (await res.json()) as { asks: Ask[] };
       setHistory(asks);
     } catch (e) {
       setError(e instanceof Error ? e.message : "load failed");
     }
-  }, []);
+  }, [fetchAs]);
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
@@ -55,7 +57,7 @@ export default function AskPage() {
     setError(null);
     setCurrentId(null);
     try {
-      const res = await fetch("/api/ask", {
+      const res = await fetchAs("/api/ask", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ prompt: prompt.trim(), experts: selected, synthesize: synth }),

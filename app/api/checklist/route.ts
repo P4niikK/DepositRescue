@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { pool, AUTHOR } from "@/lib/cockpit/db";
+import { pool } from "@/lib/cockpit/db";
+import { whoFromRequest } from "@/lib/cockpit/who";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +31,12 @@ export async function POST(req: Request) {
     if (!category || !title) {
       return NextResponse.json({ error: "category and title required" }, { status: 400 });
     }
+    const who = whoFromRequest(req);
     const { rows } = await pool.query(
       `INSERT INTO agent_checklist (category, title, tags, assignee, created_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, category, title, tags, assignee, done, created_by, created_ts, position`,
-      [category, title, tags, assignee, AUTHOR]
+      [category, title, tags, assignee, who]
     );
     return NextResponse.json({ item: rows[0] });
   } catch (e) {

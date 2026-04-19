@@ -6,6 +6,7 @@ import {
 } from "@/lib/cockpit/data";
 import { Avatar } from "@/components/cockpit/avatar";
 import { TypeIcon, TypeTag } from "@/components/cockpit/type-pill";
+import { useWho } from "@/components/cockpit/who-provider";
 import { formatJournalTs } from "@/lib/cockpit/format";
 import { cn } from "@/lib/cockpit/utils";
 
@@ -28,6 +29,7 @@ type FormattedEntry = RawEntry & { day: string; t: string };
 const POLL_MS = 10_000;
 
 export default function FeedPage() {
+  const { fetchAs } = useWho();
   const [entries, setEntries] = useState<FormattedEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function FeedPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/journal?limit=50", { cache: "no-store" });
+      const res = await fetchAs("/api/journal?limit=50", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { entries: raw } = (await res.json()) as { entries: RawEntry[] };
       setEntries(
@@ -54,7 +56,7 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchAs]);
 
   useEffect(() => {
     load();
@@ -83,7 +85,7 @@ export default function FeedPage() {
     if (!task || posting) return;
     setPosting(true);
     try {
-      const res = await fetch("/api/journal", {
+      const res = await fetchAs("/api/journal", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ kind: composerKind, task }),

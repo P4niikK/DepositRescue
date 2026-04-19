@@ -7,6 +7,7 @@ import { EXPERTS, USERS, type ExpertId, type UserId } from "@/lib/cockpit/data";
 import { cn } from "@/lib/cockpit/utils";
 import { timeAgo } from "@/lib/cockpit/format";
 import { ArtifactsPanel } from "@/components/cockpit/artifacts-panel";
+import { useWho } from "@/components/cockpit/who-provider";
 
 type Turn = { expert: ExpertId; content: string; ms?: number; error?: string };
 type Round = { n: number; turns: Turn[] };
@@ -40,6 +41,7 @@ type Debate = {
 };
 
 export default function DebatePage() {
+  const { fetchAs } = useWho();
   const [debates, setDebates] = useState<Debate[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [showLauncher, setShowLauncher] = useState(false);
@@ -58,7 +60,7 @@ export default function DebatePage() {
 
   const loadList = useCallback(async () => {
     try {
-      const res = await fetch("/api/debate?limit=20", { cache: "no-store" });
+      const res = await fetchAs("/api/debate?limit=20", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { debates: list } = (await res.json()) as { debates: Debate[] };
       setDebates(list);
@@ -66,7 +68,7 @@ export default function DebatePage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "load failed");
     }
-  }, [openId]);
+  }, [openId, fetchAs]);
 
   useEffect(() => { loadList(); }, [loadList]);
 
@@ -75,7 +77,7 @@ export default function DebatePage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/debate", {
+      const res = await fetchAs("/api/debate", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -109,7 +111,7 @@ export default function DebatePage() {
       setRoundRunning(true);
       setError(null);
       try {
-        const res = await fetch(`/api/debate/${debateId}/round`, { method: "POST" });
+        const res = await fetchAs(`/api/debate/${debateId}/round`, { method: "POST" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         await loadList();
       } catch (e) {
@@ -128,7 +130,7 @@ export default function DebatePage() {
     setClosingAsk(true);
     setError(null);
     try {
-      const res = await fetch(`/api/debate/${open.id}/close`, { method: "POST" });
+      const res = await fetchAs(`/api/debate/${open.id}/close`, { method: "POST" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await loadList();
     } catch (e) {

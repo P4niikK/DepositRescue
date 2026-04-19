@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Check, RefreshCw } from "lucide-react";
 import { USERS, type UserId } from "@/lib/cockpit/data";
 import { cn } from "@/lib/cockpit/utils";
+import { useWho } from "@/components/cockpit/who-provider";
 
 type Item = {
   id: number;
@@ -16,6 +17,7 @@ type Item = {
 };
 
 export default function ChecklistPage() {
+  const { fetchAs } = useWho();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export default function ChecklistPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/checklist", { cache: "no-store" });
+      const res = await fetchAs("/api/checklist", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { items: raw } = (await res.json()) as { items: Item[] };
       setItems(raw);
@@ -33,7 +35,7 @@ export default function ChecklistPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchAs]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -56,7 +58,7 @@ export default function ChecklistPage() {
       prev.map((p) => (p.id === it.id ? { ...p, done: next } : p))
     );
     try {
-      const res = await fetch(`/api/checklist/${it.id}`, {
+      const res = await fetchAs(`/api/checklist/${it.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ done: next }),
@@ -76,7 +78,7 @@ export default function ChecklistPage() {
     if (!title) return;
     setNewInputs((s) => ({ ...s, [category]: "" }));
     try {
-      const res = await fetch("/api/checklist", {
+      const res = await fetchAs("/api/checklist", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ category, title, tags: [] }),

@@ -2,8 +2,13 @@
 import Link from "next/link";
 import { Search, Sparkles } from "lucide-react";
 import { Avatar } from "./avatar";
+import { useWho } from "./who-provider";
+import type { UserId } from "@/lib/cockpit/data";
+import { cn } from "@/lib/cockpit/utils";
 
 export function Topbar() {
+  const { who, setWho } = useWho();
+
   return (
     <header className="sticky top-0 z-30 flex h-12 items-center gap-4 border-b border-[var(--border-1)] bg-[var(--bg-0)]/90 px-4 backdrop-blur">
       <Link href="/cockpit" className="flex items-center gap-2 font-mono text-[13px]">
@@ -21,9 +26,12 @@ export function Topbar() {
         <kbd>⌘K</kbd>
       </button>
 
-      <div className="ml-auto flex items-center gap-2">
-        <PresenceChip who="matu" doing="photo-compare.ts" live />
-        <PresenceChip who="feli" doing="debating scope" live />
+      <div className="ml-auto flex items-center gap-1">
+        <span className="mr-1 font-mono text-[10px] uppercase tracking-widest text-[var(--text-3)]">
+          yo:
+        </span>
+        <WhoButton id="matu" active={who === "matu"} onClick={() => setWho("matu")} />
+        <WhoButton id="feli" active={who === "feli"} onClick={() => setWho("feli")} />
       </div>
 
       <Link
@@ -37,21 +45,30 @@ export function Topbar() {
   );
 }
 
-function PresenceChip({
-  who,
-  doing,
-  live,
+function WhoButton({
+  id,
+  active,
+  onClick,
 }: {
-  who: "matu" | "feli";
-  doing: string;
-  live?: boolean;
+  id: UserId;
+  active: boolean;
+  onClick: () => void;
 }) {
+  const name = id === "matu" ? "Matu" : "Feli";
   return (
-    <div className="flex h-8 items-center gap-2 rounded-md border border-[var(--border-1)] bg-[var(--bg-1)] px-2 text-[11px]">
-      <Avatar who={who} size={18} />
-      <span className="text-[var(--text-1)]">{who === "matu" ? "Matu" : "Feli"}</span>
-      <span className="font-mono text-[var(--text-3)]">· {doing}</span>
-      {live && <span className="pulse-dot" />}
-    </div>
+    <button
+      onClick={onClick}
+      title={active ? `Estás posteando como ${name}` : `Cambiar a ${name}`}
+      className={cn(
+        "flex h-8 items-center gap-2 rounded-md border px-2 text-[11px] transition",
+        active
+          ? "border-[var(--amber-border)] bg-[var(--amber-soft)]/50 text-[var(--text-0)]"
+          : "border-[var(--border-1)] bg-[var(--bg-1)] text-[var(--text-2)] hover:border-[var(--border-2)] hover:text-[var(--text-1)]"
+      )}
+    >
+      <Avatar who={id} size={18} />
+      <span className={active ? "font-semibold" : ""}>{name}</span>
+      {active && <span className="pulse-dot" />}
+    </button>
   );
 }

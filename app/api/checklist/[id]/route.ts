@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { pool, AUTHOR } from "@/lib/cockpit/db";
+import { pool } from "@/lib/cockpit/db";
+import { whoFromRequest } from "@/lib/cockpit/who";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +14,12 @@ export async function PATCH(
     const sets: string[] = [];
     const values: unknown[] = [];
 
+    const who = whoFromRequest(req);
     if (typeof body.done === "boolean") {
       values.push(body.done);
       sets.push(`done = $${values.length}`);
       if (body.done) {
-        values.push(AUTHOR);
+        values.push(who);
         sets.push(`done_by = $${values.length}`);
         sets.push(`done_at = now()`);
       } else {

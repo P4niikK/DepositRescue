@@ -1,5 +1,7 @@
-// Hackathon-relative date helpers. Kickoff is Mon 2026-04-21. Submission
-// deadline Mon 2026-04-28. Day 7 ("polish + submit prep") is Sun 2026-04-27.
+// Hackathon-relative date helpers. Kickoff Tue 2026-04-21; Day 7 (polish +
+// submit prep) Mon 2026-04-27; submission deadline Tue 2026-04-28.
+// (The original roadmap doc had the days-of-week miscounted — the dates
+// are the source of truth.)
 
 export type HackathonPhase = "pre" | "during" | "submit" | "post";
 
