@@ -4,6 +4,7 @@ import { Send, Sparkles, RefreshCw } from "lucide-react";
 import { EXPERTS, type ExpertId, USERS, type UserId } from "@/lib/cockpit/data";
 import { cn } from "@/lib/cockpit/utils";
 import { timeAgo } from "@/lib/cockpit/format";
+import { ArtifactsPanel } from "@/components/cockpit/artifacts-panel";
 
 type Answer = {
   expert: ExpertId;
@@ -278,6 +279,8 @@ function AskResult({ ask }: { ask: Ask }) {
           )}
         </div>
       )}
+
+      <ArtifactsPanel kind="ask" id={ask.id} pollKey={ask.updated_ts} />
     </section>
   );
 }

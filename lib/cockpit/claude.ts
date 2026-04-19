@@ -11,9 +11,16 @@ export const MODEL_OPUS: ClaudeModel = "opus";
 export const MODEL_SONNET: ClaudeModel = "sonnet";
 export const MODEL_HAIKU: ClaudeModel = "haiku";
 
-/** Tools we never want an "expert" turn to invoke — purely chat. */
-const DISALLOWED_TOOLS = [
+/** Text-only: expert can only produce a reply, no side effects. Used for
+ *  orchestrator / judge / synthesizer, and for experts that don't need to write. */
+const TEXT_ONLY_DISALLOWED = [
   "Bash", "Edit", "Write", "Read", "Glob", "Grep",
+  "WebFetch", "WebSearch", "NotebookEdit", "Task", "TodoWrite",
+];
+
+/** Sandbox: expert CAN read/write files inside its cwd. Bash/Edit/network stay off. */
+const SANDBOX_DISALLOWED = [
+  "Bash", "Edit",
   "WebFetch", "WebSearch", "NotebookEdit", "Task", "TodoWrite",
 ];
 
@@ -38,8 +45,13 @@ export async function complete(opts: {
   model?: ClaudeModel;
   /** Hard cap in ms. Default 3 minutes per turn. */
   timeoutMs?: number;
+  /** Working directory for the spawned Claude. If set, Write/Read land here. */
+  cwd?: string;
+  /** Give the agent Write/Read/Glob/Grep tools inside cwd. Default: false (text-only). */
+  allowWrite?: boolean;
 }): Promise<string> {
   const timeoutMs = opts.timeoutMs ?? 180_000;
+  const disallowed = opts.allowWrite ? SANDBOX_DISALLOWED : TEXT_ONLY_DISALLOWED;
 
   // IMPORTANT: never put `opts.user` in argv. It can grow past Windows'
   // command-line limit (~32k chars) once debates accumulate rounds, producing
@@ -51,14 +63,20 @@ export async function complete(opts: {
     "--model", opts.model ?? "opus",
     "--output-format", "json",
     "--no-session-persistence",
-    "--disallowed-tools", DISALLOWED_TOOLS.join(","),
+    "--disallowed-tools", disallowed.join(","),
   ];
+  if (opts.allowWrite) {
+    // In --print mode the CLI needs this to auto-accept permission prompts
+    // for Write/Read since there's no human on the loop.
+    args.push("--dangerously-skip-permissions");
+  }
 
   return new Promise<string>((resolve, reject) => {
     const child = spawn("claude", args, {
       windowsHide: true,
       shell: false,
       stdio: ["pipe", "pipe", "pipe"],
+      cwd: opts.cwd,
     });
     let stdout = "";
     let stderr = "";

@@ -51,3 +51,6 @@ scratch/
 # Design handoff bundle (kept locally as reference, not committed)
 design-import/
 scaffold-tmp/
+
+# Agent workspace: artifacts and decision memory stay local
+.cockpit/

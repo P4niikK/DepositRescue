@@ -6,6 +6,7 @@ import {
 import { EXPERTS, USERS, type ExpertId, type UserId } from "@/lib/cockpit/data";
 import { cn } from "@/lib/cockpit/utils";
 import { timeAgo } from "@/lib/cockpit/format";
+import { ArtifactsPanel } from "@/components/cockpit/artifacts-panel";
 
 type Turn = { expert: ExpertId; content: string; ms?: number; error?: string };
 type Round = { n: number; turns: Turn[] };
@@ -404,6 +405,8 @@ function DebateDetail({
         <Side title="CONTROL">
           <SideButton icon={<Pin size={11} />}>Pin a commit</SideButton>
         </Side>
+
+        <ArtifactsPanel kind="debate" id={debate.id} pollKey={debate.updated_ts} />
       </div>
     </div>
   );

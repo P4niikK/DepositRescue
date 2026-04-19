@@ -8,7 +8,22 @@ import {
 import {
   EXPERT_SPECS, orchestratorSystem, judgeSystem, synthesizerSystem,
 } from "./experts";
+import { decisionsBlock, appendDecision } from "./decisions";
+import { sessionDir } from "./sandbox";
 import type { ExpertId } from "./data";
+
+const ARTIFACT_HINT = `
+
+ARCHIVOS (OPCIONAL)
+-------------------
+Tenés acceso a Write/Read/Glob/Grep dentro del directorio de esta sesión. Si tu respuesta produce un artefacto concreto (ej. borrador de demand letter, outline de un skill, plantilla) creá el archivo con Write y mencionalo al final de tu respuesta con \`→ archivo: <nombre>\`. Sólo archivos cortos, markdown o texto. No uses paths absolutos, no crees subdirectorios.`.trim();
+
+function expertSystem(expertId: ExpertId, withWrite: boolean): string {
+  const base = EXPERT_SPECS[expertId].system;
+  const decisions = decisionsBlock();
+  const artifact = withWrite ? `\n\n${ARTIFACT_HINT}` : "";
+  return base + decisions + artifact;
+}
 
 export type Turn = { expert: ExpertId; content: string; ms: number; error?: string };
 export type Round = { n: number; turns: Turn[] };
@@ -118,14 +133,17 @@ async function runTurn(
   debate: Pick<DebateRow, "prompt" | "data">,
   roundN: number,
   expert: ExpertId,
+  cwd: string,
   previousTurnsThisRound?: Turn[]
 ): Promise<Turn> {
   const started = Date.now();
   try {
     const content = await complete({
-      system: EXPERT_SPECS[expert].system,
+      system: expertSystem(expert, true),
       user: buildUserForExpert(debate, roundN, expert, previousTurnsThisRound),
       model: MODEL_OPUS,
+      cwd,
+      allowWrite: true,
     });
     return { expert, content, ms: Date.now() - started };
   } catch (e) {
@@ -140,18 +158,19 @@ async function runTurn(
 
 /** Ejecuta una ronda completa. Experts en paralelo. Devil al final (serial). */
 export async function runRound(
-  debate: Pick<DebateRow, "prompt" | "include_devil" | "data">,
+  debate: Pick<DebateRow, "id" | "prompt" | "include_devil" | "data">,
   roundN: number
 ): Promise<Round> {
+  const cwd = sessionDir("debate", debate.id);
   const nonDevil = debate.data.experts.filter((e) => e !== "devil");
   const parallelTurns = await Promise.all(
-    nonDevil.map((e) => runTurn(debate, roundN, e))
+    nonDevil.map((e) => runTurn(debate, roundN, e, cwd))
   );
 
   const turns: Turn[] = [...parallelTurns];
 
   if (debate.include_devil) {
-    const devilTurn = await runTurn(debate, roundN, "devil", parallelTurns);
+    const devilTurn = await runTurn(debate, roundN, "devil", cwd, parallelTurns);
     turns.push(devilTurn);
   }
 
@@ -196,7 +215,7 @@ export async function runJudge(
 }
 
 export async function runSynthesis(
-  debate: Pick<DebateRow, "prompt" | "data">
+  debate: Pick<DebateRow, "id" | "prompt" | "data">
 ): Promise<Synthesis> {
   const body = [
     `PREGUNTA:\n${debate.prompt}`,
@@ -211,11 +230,24 @@ export async function runSynthesis(
 
   try {
     const raw = await complete({
-      system: synthesizerSystem(),
+      system: synthesizerSystem() + decisionsBlock(),
       user: body,
       model: MODEL_OPUS,
+      cwd: sessionDir("debate", debate.id),
     });
-    return parseJsonReply<Synthesis>(raw);
+    const parsed = parseJsonReply<Synthesis>(raw);
+    // Auto-commit the headline into the compact decisions memory.
+    try {
+      appendDecision({
+        source: "debate",
+        sourceId: debate.id,
+        headline: parsed.headline,
+        dissent: parsed.dissent || undefined,
+      });
+    } catch {
+      // non-fatal; memory write should never break the flow
+    }
+    return parsed;
   } catch {
     return {
       headline: "Sin síntesis: el sintetizador falló",

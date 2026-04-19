@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { pool, AUTHOR } from "@/lib/cockpit/db";
 import { complete, parseJsonReply, MODEL_OPUS } from "@/lib/cockpit/claude";
 import { EXPERT_SPECS, synthesizerSystem } from "@/lib/cockpit/experts";
+import { decisionsBlock, appendDecision } from "@/lib/cockpit/decisions";
+import { sessionDir } from "@/lib/cockpit/sandbox";
 import type { ExpertId } from "@/lib/cockpit/data";
+
+const ARTIFACT_HINT = `
+
+ARCHIVOS (OPCIONAL)
+-------------------
+Tenés acceso a Write/Read/Glob/Grep dentro del directorio de esta sesión. Si tu respuesta produce un artefacto concreto (ej. borrador de demand letter, outline de un skill, plantilla) creá el archivo con Write y mencionalo al final con \`→ archivo: <nombre>\`. Sólo archivos cortos, markdown/texto. No uses paths absolutos, no crees subdirectorios.`.trim();
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120; // seconds, each expert + synthesis
@@ -14,14 +22,16 @@ type Answer = {
   ms: number;
 };
 
-async function runExpert(expertId: ExpertId, prompt: string): Promise<Answer> {
+async function runExpert(expertId: ExpertId, prompt: string, cwd: string): Promise<Answer> {
   const spec = EXPERT_SPECS[expertId];
   const started = Date.now();
   try {
     const content = await complete({
-      system: spec.system,
+      system: spec.system + decisionsBlock() + `\n\n${ARTIFACT_HINT}`,
       user: prompt,
       model: MODEL_OPUS,
+      cwd,
+      allowWrite: true,
     });
     return { expert: expertId, status: "done", content, ms: Date.now() - started };
   } catch (e) {
@@ -36,7 +46,8 @@ async function runExpert(expertId: ExpertId, prompt: string): Promise<Answer> {
 
 async function synthesize(
   prompt: string,
-  answers: Answer[]
+  answers: Answer[],
+  cwd: string
 ): Promise<{ headline: string; points: string[]; dissent: string } | null> {
   const body = [
     `PREGUNTA ORIGINAL:\n${prompt}`,
@@ -52,9 +63,10 @@ async function synthesize(
 
   try {
     const raw = await complete({
-      system: synthesizerSystem(),
+      system: synthesizerSystem() + decisionsBlock(),
       user: body,
       model: MODEL_OPUS,
+      cwd,
     });
     return parseJsonReply(raw);
   } catch {
@@ -102,11 +114,24 @@ export async function POST(req: Request) {
       [AUTHOR, prompt, validExperts, synthesizeFlag]
     );
     const askId = initial[0].id as string;
+    const cwd = sessionDir("ask", askId);
 
-    const answers = await Promise.all(validExperts.map((e) => runExpert(e, prompt)));
+    const answers = await Promise.all(validExperts.map((e) => runExpert(e, prompt, cwd)));
     let synthesis = null;
     if (synthesizeFlag && answers.some((a) => a.status === "done")) {
-      synthesis = await synthesize(prompt, answers);
+      synthesis = await synthesize(prompt, answers, cwd);
+      if (synthesis) {
+        try {
+          appendDecision({
+            source: "ask",
+            sourceId: askId,
+            headline: synthesis.headline,
+            dissent: synthesis.dissent || undefined,
+          });
+        } catch {
+          // non-fatal
+        }
+      }
     }
 
     const data = { answers, synthesis, error: null };
