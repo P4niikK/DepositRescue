@@ -36,12 +36,17 @@ export async function complete(opts: {
   system: string;
   user: string;
   model?: ClaudeModel;
-  /** Hard cap in ms. Default 2 minutes per turn. */
+  /** Hard cap in ms. Default 3 minutes per turn. */
   timeoutMs?: number;
 }): Promise<string> {
-  const timeoutMs = opts.timeoutMs ?? 120_000;
+  const timeoutMs = opts.timeoutMs ?? 180_000;
+
+  // IMPORTANT: never put `opts.user` in argv. It can grow past Windows'
+  // command-line limit (~32k chars) once debates accumulate rounds, producing
+  // ENAMETOOLONG. We stream it via stdin. `opts.system` stays in argv (it's
+  // bounded, ~3k chars per expert).
   const args = [
-    "-p", opts.user,
+    "-p",
     "--system-prompt", opts.system,
     "--model", opts.model ?? "opus",
     "--output-format", "json",
@@ -50,10 +55,21 @@ export async function complete(opts: {
   ];
 
   return new Promise<string>((resolve, reject) => {
-    const child = spawn("claude", args, { windowsHide: true, shell: false });
+    const child = spawn("claude", args, {
+      windowsHide: true,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     let stdout = "";
     let stderr = "";
     let killed = false;
+    let settled = false;
+
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
 
     const killTimer = setTimeout(() => {
       killed = true;
@@ -63,35 +79,44 @@ export async function complete(opts: {
     child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
     child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
 
+    child.stdin.on("error", (err) => {
+      clearTimeout(killTimer);
+      settle(() => reject(new ClaudeCliError(`claude stdin error: ${err.message}`, stderr)));
+    });
+
     child.on("error", (err) => {
       clearTimeout(killTimer);
-      reject(new ClaudeCliError(`claude spawn failed: ${err.message}`, stderr));
+      settle(() => reject(new ClaudeCliError(`claude spawn failed: ${err.message}`, stderr)));
     });
 
     child.on("close", (code) => {
       clearTimeout(killTimer);
       if (killed) {
-        return reject(new ClaudeCliError(`claude timed out after ${timeoutMs}ms`, stderr));
+        return settle(() => reject(new ClaudeCliError(`claude timed out after ${timeoutMs}ms`, stderr)));
       }
       if (code !== 0) {
-        return reject(new ClaudeCliError(
+        return settle(() => reject(new ClaudeCliError(
           `claude exited with code ${code}: ${(stderr || stdout).slice(0, 500)}`,
           stderr
-        ));
+        )));
       }
       try {
         const parsed = JSON.parse(stdout) as ClaudeResult;
         if (parsed.is_error) {
-          return reject(new ClaudeCliError(`claude reported error: ${parsed.result}`, stderr));
+          return settle(() => reject(new ClaudeCliError(`claude reported error: ${parsed.result}`, stderr)));
         }
-        resolve(parsed.result);
+        settle(() => resolve(parsed.result));
       } catch (e) {
-        reject(new ClaudeCliError(
+        settle(() => reject(new ClaudeCliError(
           `could not parse claude output as JSON: ${e instanceof Error ? e.message : "unknown"}\nstdout head: ${stdout.slice(0, 200)}`,
           stderr
-        ));
+        )));
       }
     });
+
+    // Stream the user prompt.
+    child.stdin.write(opts.user);
+    child.stdin.end();
   });
 }
 
