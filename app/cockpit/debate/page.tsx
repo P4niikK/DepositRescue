@@ -1,7 +1,7 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Plus, Gavel, Pin, Sparkles, GitCommitHorizontal, RefreshCw, Play,
+  Plus, Gavel, Pin, Sparkles, GitCommitHorizontal, RefreshCw, Loader2,
 } from "lucide-react";
 import { EXPERTS, USERS, type ExpertId, type UserId } from "@/lib/cockpit/data";
 import { cn } from "@/lib/cockpit/utils";
@@ -52,6 +52,8 @@ export default function DebatePage() {
   const [roundRunning, setRoundRunning] = useState(false);
   const [closingAsk, setClosingAsk] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Guard for auto-continuation: one round-in-flight at a time across re-renders. */
+  const inFlightRef = useRef(false);
 
   const loadList = useCallback(async () => {
     try {
@@ -99,23 +101,29 @@ export default function DebatePage() {
 
   const open = debates.find((d) => d.id === openId);
 
-  const nextRound = async () => {
-    if (!open || roundRunning) return;
-    setRoundRunning(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/debate/${open.id}/round`, { method: "POST" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await loadList();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "round failed");
-    } finally {
-      setRoundRunning(false);
-    }
-  };
+  const runRound = useCallback(
+    async (debateId: string) => {
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
+      setRoundRunning(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/debate/${debateId}/round`, { method: "POST" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await loadList();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "round failed");
+      } finally {
+        setRoundRunning(false);
+        inFlightRef.current = false;
+      }
+    },
+    [loadList]
+  );
 
-  const forceClose = async () => {
-    if (!open || closingAsk) return;
+  const forceClose = useCallback(async () => {
+    if (!open || closingAsk || inFlightRef.current) return;
+    inFlightRef.current = true;
     setClosingAsk(true);
     setError(null);
     try {
@@ -126,8 +134,19 @@ export default function DebatePage() {
       setError(e instanceof Error ? e.message : "close failed");
     } finally {
       setClosingAsk(false);
+      inFlightRef.current = false;
     }
-  };
+  }, [open, closingAsk, loadList]);
+
+  // Auto-advance: while the selected debate is live and no turn is in flight,
+  // fire the next round automatically. Stops when judge closes or max_rounds hit.
+  useEffect(() => {
+    if (!open || open.status !== "live") return;
+    if (open.round >= open.max_rounds) return;
+    if (inFlightRef.current) return;
+    const t = setTimeout(() => runRound(open.id), 300);
+    return () => clearTimeout(t);
+  }, [open?.id, open?.status, open?.round, open?.max_rounds, runRound]);
 
   return (
     <div className="flex flex-col gap-5 p-6">
@@ -255,7 +274,6 @@ export default function DebatePage() {
       {open && (
         <DebateDetail
           debate={open}
-          onNextRound={nextRound}
           onClose={forceClose}
           roundRunning={roundRunning}
           closing={closingAsk}
@@ -267,13 +285,11 @@ export default function DebatePage() {
 
 function DebateDetail({
   debate,
-  onNextRound,
   onClose,
   roundRunning,
   closing,
 }: {
   debate: Debate;
-  onNextRound: () => void;
   onClose: () => void;
   roundRunning: boolean;
   closing: boolean;
@@ -312,22 +328,23 @@ function DebateDetail({
         })}
 
         {debate.status === "live" && (
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-between gap-3 rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)]/40 px-3 py-2">
+            <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--amber)]">
+              <Loader2 size={12} className="animate-spin" />
+              {closing
+                ? "sintetizando…"
+                : roundRunning
+                ? `corriendo ronda ${debate.round + 1}/${debate.max_rounds}…`
+                : `esperando próxima ronda (R${debate.round + 1}/${debate.max_rounds})`}
+            </div>
             <button
               onClick={onClose}
               disabled={roundRunning || closing}
-              className="flex items-center gap-2 rounded-md border border-[var(--border-1)] bg-[var(--bg-2)] px-3 py-1.5 font-mono text-[11px] text-[var(--text-2)] transition hover:border-[var(--border-2)] hover:text-[var(--text-1)] disabled:opacity-40"
+              className="flex items-center gap-2 rounded-md border border-[var(--border-2)] bg-[var(--bg-1)] px-3 py-1.5 font-mono text-[11px] text-[var(--text-2)] transition hover:border-[var(--border-3)] hover:text-[var(--text-1)] disabled:opacity-40"
+              title="Corta el auto-encadenado y fuerza síntesis con lo que hay"
             >
               <Gavel size={11} />
-              {closing ? "sintetizando…" : "Forzar síntesis"}
-            </button>
-            <button
-              onClick={onNextRound}
-              disabled={roundRunning || closing}
-              className="flex items-center gap-2 rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)] px-3 py-1.5 font-mono text-[11px] text-[var(--amber)] transition hover:bg-[var(--amber)]/20 disabled:opacity-40"
-            >
-              <Play size={11} />
-              {roundRunning ? "corriendo ronda…" : `Próxima ronda (R${debate.round + 1})`}
+              Forzar síntesis
             </button>
           </div>
         )}
