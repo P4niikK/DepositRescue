@@ -1,14 +1,133 @@
 "use client";
-import { useState } from "react";
-import { Plus, Gavel, Pin, Sparkles, GitCommitHorizontal } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  DEBATES, EXPERTS, type Debate, type Expert,
-} from "@/lib/cockpit/data";
+  Plus, Gavel, Pin, Sparkles, GitCommitHorizontal, RefreshCw, Play,
+} from "lucide-react";
+import { EXPERTS, USERS, type ExpertId, type UserId } from "@/lib/cockpit/data";
 import { cn } from "@/lib/cockpit/utils";
+import { timeAgo } from "@/lib/cockpit/format";
+
+type Turn = { expert: ExpertId; content: string; ms?: number; error?: string };
+type Round = { n: number; turns: Turn[] };
+type Judgement = {
+  round: number;
+  verdict: string;
+  decision: "continue" | "close";
+  focus_next: string | null;
+};
+type Synthesis = { headline: string; points: string[]; dissent: string };
+
+type Debate = {
+  id: string;
+  created_ts: string;
+  updated_ts: string;
+  author: UserId;
+  prompt: string;
+  status: "live" | "closed" | "error";
+  round: number;
+  include_devil: boolean;
+  max_rounds: number;
+  data: {
+    experts: ExpertId[];
+    orchestrator_reasoning?: string;
+    rounds: Round[];
+    judgements: Judgement[];
+    synthesis: Synthesis | null;
+    error: string | null;
+  };
+  pinned_commit: string | null;
+};
 
 export default function DebatePage() {
-  const [openId, setOpenId] = useState<string>("d1");
-  const open = DEBATES.find((d) => d.id === openId);
+  const [debates, setDebates] = useState<Debate[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [showLauncher, setShowLauncher] = useState(false);
+
+  // Launcher state
+  const [prompt, setPrompt] = useState("");
+  const [includeDevil, setIncludeDevil] = useState(true);
+  const [maxRounds, setMaxRounds] = useState(5);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [roundRunning, setRoundRunning] = useState(false);
+  const [closingAsk, setClosingAsk] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadList = useCallback(async () => {
+    try {
+      const res = await fetch("/api/debate?limit=20", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { debates: list } = (await res.json()) as { debates: Debate[] };
+      setDebates(list);
+      if (!openId && list.length > 0) setOpenId(list[0].id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "load failed");
+    }
+  }, [openId]);
+
+  useEffect(() => { loadList(); }, [loadList]);
+
+  const launch = async () => {
+    if (!prompt.trim() || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/debate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          include_devil: includeDevil,
+          max_rounds: maxRounds,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+      const { debate } = (await res.json()) as { debate: Debate };
+      setOpenId(debate.id);
+      setPrompt("");
+      setShowLauncher(false);
+      await loadList();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "launch failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const open = debates.find((d) => d.id === openId);
+
+  const nextRound = async () => {
+    if (!open || roundRunning) return;
+    setRoundRunning(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/debate/${open.id}/round`, { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await loadList();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "round failed");
+    } finally {
+      setRoundRunning(false);
+    }
+  };
+
+  const forceClose = async () => {
+    if (!open || closingAsk) return;
+    setClosingAsk(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/debate/${open.id}/close`, { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await loadList();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "close failed");
+    } finally {
+      setClosingAsk(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-5 p-6">
@@ -16,140 +135,228 @@ export default function DebatePage() {
         <div>
           <h1 className="text-[22px] font-semibold text-[var(--text-0)]">Debates</h1>
           <p className="font-mono text-[11px] text-[var(--text-3)]">
-            {DEBATES.filter((d) => d.status === "live").length} live ·{" "}
-            {DEBATES.filter((d) => d.status === "closed").length} cerrados
+            {debates.filter((d) => d.status === "live").length} live ·{" "}
+            {debates.filter((d) => d.status === "closed").length} cerrados
           </p>
         </div>
-        <button className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)] px-3 font-mono text-[11px] uppercase tracking-wider text-[var(--amber)] transition hover:bg-[var(--amber)]/20">
-          <Plus size={12} /> Nuevo debate
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadList}
+            className="flex h-8 items-center justify-center rounded-md border border-[var(--border-1)] bg-[var(--bg-1)] px-2 text-[var(--text-2)] transition hover:border-[var(--border-2)] hover:text-[var(--text-1)]"
+          >
+            <RefreshCw size={12} />
+          </button>
+          <button
+            onClick={() => setShowLauncher((s) => !s)}
+            className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)] px-3 font-mono text-[11px] uppercase tracking-wider text-[var(--amber)] transition hover:bg-[var(--amber)]/20"
+          >
+            <Plus size={12} /> Nuevo debate
+          </button>
+        </div>
       </header>
 
-      <div className="flex flex-col gap-1.5">
-        {DEBATES.map((d) => (
-          <DebateListCard
-            key={d.id}
-            debate={d}
-            openId={openId}
-            onClick={() => setOpenId(d.id)}
-          />
-        ))}
-      </div>
+      {error && (
+        <div className="rounded-md border border-[color-mix(in_oklch,var(--c-blocked)_40%,transparent)] bg-[color-mix(in_oklch,var(--c-blocked)_10%,transparent)] px-3 py-2 font-mono text-[11px] text-[var(--c-blocked)]">
+          ⚠ {error}
+        </div>
+      )}
 
-      {open && <DebateDetail debate={open} />}
+      {showLauncher && (
+        <section className="flex flex-col gap-3 rounded-md border border-[var(--border-2)] bg-[var(--bg-1)] p-4">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={3}
+            placeholder="Planteá la pregunta o decisión que querés que debatan (ej: ¿Server Actions o API routes para los writes del feed?)"
+            className="w-full resize-none bg-transparent text-[13.5px] text-[var(--text-0)] placeholder:text-[var(--text-3)] focus:outline-none"
+            disabled={submitting}
+          />
+          <div className="flex flex-wrap items-center gap-5 pt-1 text-[11.5px] text-[var(--text-2)]">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={includeDevil}
+                onChange={(e) => setIncludeDevil(e.target.checked)}
+                className="h-3.5 w-3.5 accent-[var(--amber)]"
+                disabled={submitting}
+              />
+              Incluir abogado del diablo
+            </label>
+            <label className="flex items-center gap-2">
+              Rondas máx
+              <select
+                value={maxRounds}
+                onChange={(e) => setMaxRounds(Number(e.target.value))}
+                className="rounded border border-[var(--border-1)] bg-[var(--bg-2)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-1)]"
+                disabled={submitting}
+              >
+                {[2, 3, 4, 5, 6, 8, 10].map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              onClick={launch}
+              disabled={!prompt.trim() || submitting}
+              className="ml-auto flex items-center gap-2 rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)] px-4 py-1.5 font-mono text-[11px] text-[var(--amber)] transition hover:bg-[var(--amber)]/20 disabled:opacity-40"
+            >
+              {submitting ? "debatiendo (puede tardar ~60s)…" : <><Sparkles size={12} /> Lanzar debate</>}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {debates.length === 0 ? (
+        <div className="py-12 text-center font-mono text-[11px] text-[var(--text-3)]">
+          sin debates · lanzá el primero
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {debates.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => setOpenId(d.id)}
+              className={cn(
+                "flex items-center gap-3 rounded-md border px-3 py-2 text-left transition",
+                d.id === openId
+                  ? "border-[var(--border-3)] bg-[var(--bg-2)]"
+                  : "border-[var(--border-1)] bg-[var(--bg-1)] hover:border-[var(--border-2)]"
+              )}
+            >
+              <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider">
+                {d.status === "live" && <span className="pulse-dot" />}
+                <span style={{ color: d.status === "live" ? "var(--amber)" : "var(--text-3)" }}>
+                  {d.status}
+                </span>
+              </span>
+              <span className="flex-1 truncate text-[12.5px] text-[var(--text-1)]">{d.prompt}</span>
+              <div className="flex -space-x-1.5">
+                {d.data.experts.slice(0, 4).map((eid) => {
+                  const ex = EXPERTS[eid];
+                  return (
+                    <span
+                      key={eid}
+                      className="flex h-5 w-5 items-center justify-center rounded-md border border-[var(--bg-0)] font-mono text-[9px] font-semibold text-[var(--bg-0)]"
+                      style={{ background: ex.color }}
+                    >
+                      {ex.initials}
+                    </span>
+                  );
+                })}
+              </div>
+              <span className="font-mono text-[10px] text-[var(--text-3)]">
+                R{d.round}/{d.max_rounds} · {timeAgo(d.created_ts)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {open && (
+        <DebateDetail
+          debate={open}
+          onNextRound={nextRound}
+          onClose={forceClose}
+          roundRunning={roundRunning}
+          closing={closingAsk}
+        />
+      )}
     </div>
   );
 }
 
-function DebateListCard({
+function DebateDetail({
   debate,
-  openId,
-  onClick,
+  onNextRound,
+  onClose,
+  roundRunning,
+  closing,
 }: {
   debate: Debate;
-  openId: string;
-  onClick: () => void;
+  onNextRound: () => void;
+  onClose: () => void;
+  roundRunning: boolean;
+  closing: boolean;
 }) {
-  const isOpen = debate.id === openId;
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-3 rounded-md border px-3 py-2 text-left transition",
-        isOpen
-          ? "border-[var(--border-3)] bg-[var(--bg-2)]"
-          : "border-[var(--border-1)] bg-[var(--bg-1)] hover:border-[var(--border-2)]"
-      )}
-    >
-      <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider">
-        {debate.status === "live" && <span className="pulse-dot" />}
-        <span style={{ color: debate.status === "live" ? "var(--amber)" : "var(--text-3)" }}>
-          {debate.status}
-        </span>
-      </span>
-      <span className="flex-1 truncate text-[12.5px] text-[var(--text-1)]">{debate.prompt}</span>
-      <div className="flex -space-x-1.5">
-        {debate.experts.slice(0, 4).map((eid) => {
-          const ex = EXPERTS[eid];
-          return (
-            <span
-              key={eid}
-              className="flex h-5 w-5 items-center justify-center rounded-md border border-[var(--bg-0)] font-mono text-[9px] font-semibold text-[var(--bg-0)]"
-              style={{ background: ex.color }}
-            >
-              {ex.initials}
-            </span>
-          );
-        })}
-      </div>
-      <span className="font-mono text-[10px] text-[var(--text-3)]">
-        R{debate.round} · {debate.opened}
-      </span>
-    </button>
-  );
-}
-
-function DebateDetail({ debate }: { debate: Debate }) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_240px]">
       <div className="min-w-0 space-y-4">
         <div className="rounded-md border border-[var(--border-1)] bg-[var(--bg-1)] p-4">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-3)]">
-            DEBATE · {debate.author === "matu" ? "Matu" : "Feli"} · opened{" "}
-            {debate.opened}
+            DEBATE · {USERS[debate.author].name} · {timeAgo(debate.created_ts)}
           </div>
           <div className="mt-2 text-[15px] font-medium text-[var(--text-0)]">
             {debate.prompt}
           </div>
-          {debate.orchestrator && (
-            <div
-              className="mt-3 rounded border border-[var(--border-1)] bg-[var(--bg-2)] px-3 py-2 text-[12px] leading-relaxed text-[var(--text-2)]"
-              dangerouslySetInnerHTML={{
-                __html: `<span class="font-mono uppercase tracking-wider text-[10px]" style="color: var(--amber-dim)">Orquestador</span> · ${debate.orchestrator}`,
-              }}
-            />
+          {debate.data.orchestrator_reasoning && (
+            <div className="mt-3 rounded border border-[var(--border-1)] bg-[var(--bg-2)] px-3 py-2 text-[12px] leading-relaxed text-[var(--text-2)]">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--amber-dim)]">
+                Orquestador
+              </span>{" "}
+              · {debate.data.orchestrator_reasoning}
+            </div>
           )}
         </div>
 
-        {debate.rounds?.map((round, ri) => {
-          const isLast = ri === debate.rounds!.length - 1;
-          const isLive = debate.status === "live" && isLast;
-          const verdict = debate.judgeVerdicts?.find((v) => v.round === round.n);
+        {debate.data.rounds.map((round) => {
+          const verdict = debate.data.judgements.find((v) => v.round === round.n);
           return (
             <div key={round.n} className="space-y-3">
-              <RoundLabel n={round.n} live={isLive} />
+              <RoundLabel n={round.n} />
               {round.turns.map((turn, ti) => (
-                <Turn key={ti} expert={EXPERTS[turn.who]} content={turn.content} thinking={turn.thinking} />
+                <Turn key={ti} turn={turn} />
               ))}
-              {verdict && <JudgeBar verdict={verdict.verdict} next={round.n + 1} />}
+              {verdict && <JudgeBar j={verdict} />}
             </div>
           );
         })}
 
-        {debate.status === "closed" && debate.synthesis && (
+        {debate.status === "live" && (
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={onClose}
+              disabled={roundRunning || closing}
+              className="flex items-center gap-2 rounded-md border border-[var(--border-1)] bg-[var(--bg-2)] px-3 py-1.5 font-mono text-[11px] text-[var(--text-2)] transition hover:border-[var(--border-2)] hover:text-[var(--text-1)] disabled:opacity-40"
+            >
+              <Gavel size={11} />
+              {closing ? "sintetizando…" : "Forzar síntesis"}
+            </button>
+            <button
+              onClick={onNextRound}
+              disabled={roundRunning || closing}
+              className="flex items-center gap-2 rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)] px-3 py-1.5 font-mono text-[11px] text-[var(--amber)] transition hover:bg-[var(--amber)]/20 disabled:opacity-40"
+            >
+              <Play size={11} />
+              {roundRunning ? "corriendo ronda…" : `Próxima ronda (R${debate.round + 1})`}
+            </button>
+          </div>
+        )}
+
+        {debate.status === "closed" && debate.data.synthesis && (
           <div className="rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)]/40 p-4">
             <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-[var(--amber)]">
               <Sparkles size={11} />
               SÍNTESIS · cerrada en ronda {debate.round}
             </div>
             <h3 className="mt-2 text-[15px] font-semibold text-[var(--text-0)]">
-              {debate.synthesis.headline}
+              {debate.data.synthesis.headline}
             </h3>
             <ul className="mt-2 space-y-1 text-[12.5px] text-[var(--text-1)]">
-              {debate.synthesis.points.map((p, i) => (
+              {debate.data.synthesis.points.map((p, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="text-[var(--amber)]">·</span>
                   <span>{p}</span>
                 </li>
               ))}
             </ul>
-            <div className="mt-3 border-t border-[var(--amber-border)] pt-2 text-[12px] text-[var(--text-2)]">
-              <b className="text-[var(--text-0)]">Disidencia:</b> {debate.synthesis.dissent}
-            </div>
-            {debate.commit && (
+            {debate.data.synthesis.dissent && (
+              <div className="mt-3 border-t border-[var(--amber-border)] pt-2 text-[12px] text-[var(--text-2)]">
+                <b className="text-[var(--text-0)]">Disidencia:</b> {debate.data.synthesis.dissent}
+              </div>
+            )}
+            {debate.pinned_commit && (
               <div className="mt-2 flex items-center gap-2 font-mono text-[11px] text-[var(--amber)]">
-                <GitCommitHorizontal size={11} />
-                {debate.commit.sha} — {debate.commit.msg}
+                <GitCommitHorizontal size={11} /> {debate.pinned_commit}
               </div>
             )}
           </div>
@@ -157,10 +364,9 @@ function DebateDetail({ debate }: { debate: Debate }) {
       </div>
 
       <div className="flex flex-col gap-3">
-        <Side title={`EXPERTOS (${debate.experts.length})`}>
-          {debate.experts.map((eid) => {
+        <Side title={`EXPERTOS (${debate.data.experts.length})`}>
+          {debate.data.experts.map((eid) => {
             const ex = EXPERTS[eid];
-            const typing = debate.status === "live" && eid === "arq";
             return (
               <div key={eid} className="flex items-center gap-2 text-[11px]">
                 <span
@@ -170,13 +376,8 @@ function DebateDetail({ debate }: { debate: Debate }) {
                   {ex.initials}
                 </span>
                 <span className="flex-1 truncate text-[var(--text-1)]">{ex.role}</span>
-                <span
-                  className={cn(
-                    "font-mono text-[9px] uppercase tracking-wider",
-                    typing ? "text-[var(--amber)]" : "text-[var(--text-3)]"
-                  )}
-                >
-                  {typing ? "typing" : "ready"}
+                <span className="font-mono text-[9px] uppercase tracking-wider text-[var(--text-3)]">
+                  {eid === "devil" ? "devil" : "ready"}
                 </span>
               </div>
             );
@@ -184,49 +385,25 @@ function DebateDetail({ debate }: { debate: Debate }) {
         </Side>
 
         <Side title="CONTROL">
-          <SideButton icon={<Plus size={11} />}>Sumar experto</SideButton>
-          <SideButton icon={<Gavel size={11} />}>Forzar síntesis</SideButton>
           <SideButton icon={<Pin size={11} />}>Pin a commit</SideButton>
-        </Side>
-
-        <Side title="PINNED A">
-          <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--text-2)]">
-            <GitCommitHorizontal size={11} />
-            <span className="text-[var(--amber)]">a3f9b21</span>
-            <span className="text-[var(--text-3)]">· pending</span>
-          </div>
         </Side>
       </div>
     </div>
   );
 }
 
-function RoundLabel({ n, live }: { n: number; live: boolean }) {
+function RoundLabel({ n }: { n: number }) {
   return (
     <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest">
-      <span style={{ color: live ? "var(--amber)" : "var(--text-3)" }}>
-        RONDA {n}
-      </span>
+      <span className="text-[var(--text-2)]">RONDA {n}</span>
       <div className="h-px flex-1 bg-[var(--border-1)]" />
-      {live && (
-        <span className="flex items-center gap-1 text-[var(--amber)]">
-          <span className="pulse-dot" /> en curso
-        </span>
-      )}
     </div>
   );
 }
 
-function Turn({
-  expert,
-  content,
-  thinking,
-}: {
-  expert: Expert;
-  content: string[];
-  thinking?: boolean;
-}) {
-  const isDevil = expert.id === "devil";
+function Turn({ turn }: { turn: Turn }) {
+  const ex = EXPERTS[turn.expert];
+  const isDevil = turn.expert === "devil";
   return (
     <div
       className={cn(
@@ -238,14 +415,14 @@ function Turn({
     >
       <span
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md font-mono text-[11px] font-bold text-[var(--bg-0)]"
-        style={{ background: expert.color }}
+        style={{ background: ex.color }}
       >
-        {expert.initials}
+        {ex.initials}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="font-semibold text-[var(--text-0)]">{expert.role}</span>
-          <span className="text-[var(--text-3)]">· {expert.desc}</span>
+          <span className="font-semibold text-[var(--text-0)]">{ex.role}</span>
+          <span className="text-[var(--text-3)]">· {ex.desc}</span>
           {isDevil && (
             <span
               className="ml-auto rounded border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider"
@@ -258,35 +435,43 @@ function Turn({
               abogado del diablo
             </span>
           )}
-        </div>
-        {thinking ? (
-          <div className="mt-1.5 font-mono text-[11px] text-[var(--text-3)]">
-            pensando respuesta
-            <span className="typing-dots">
-              <span /> <span /> <span />
+          {turn.ms !== undefined && (
+            <span className="ml-auto font-mono text-[9px] text-[var(--text-3)]">
+              {(turn.ms / 1000).toFixed(1)}s
             </span>
-          </div>
+          )}
+        </div>
+        {turn.error ? (
+          <p className="mt-1.5 font-mono text-[11px] text-[var(--c-blocked)]">⚠ {turn.error}</p>
         ) : (
-          <div className="mt-2 space-y-2 text-[12.5px] leading-relaxed text-[var(--text-1)]">
-            {content.map((p, i) => (
-              <p key={i} dangerouslySetInnerHTML={{ __html: renderRich(p) }} />
-            ))}
-          </div>
+          <div
+            className="mt-2 whitespace-pre-wrap text-[12.5px] leading-relaxed text-[var(--text-1)]"
+            dangerouslySetInnerHTML={{ __html: renderRich(turn.content) }}
+          />
         )}
       </div>
     </div>
   );
 }
 
-function JudgeBar({ verdict, next }: { verdict: string; next: number }) {
+function JudgeBar({ j }: { j: Judgement }) {
   return (
     <div className="rounded-md border border-[color-mix(in_oklch,var(--c-decided)_35%,transparent)] bg-[color-mix(in_oklch,var(--c-decided)_10%,transparent)] p-3">
-      <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--c-decided)" }}>
-        <Gavel size={11} /> JUEZ · veredicto
+      <div
+        className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest"
+        style={{ color: "var(--c-decided)" }}
+      >
+        <Gavel size={11} /> JUEZ · veredicto ronda {j.round}
       </div>
-      <p className="mt-1 text-[12.5px] text-[var(--text-1)]">{verdict}</p>
+      <p className="mt-1 text-[12.5px] text-[var(--text-1)]">{j.verdict}</p>
       <div className="mt-1.5 font-mono text-[11px] text-[var(--text-2)]">
-        → decisión: <b style={{ color: "var(--text-0)" }}>continuar a ronda {next}</b>
+        → decisión:{" "}
+        <b style={{ color: "var(--text-0)" }}>
+          {j.decision === "close" ? "cerrar con síntesis" : `continuar a ronda ${j.round + 1}`}
+        </b>
+        {j.focus_next && (
+          <span className="mt-1 block text-[var(--text-3)]">foco: {j.focus_next}</span>
+        )}
       </div>
     </div>
   );
@@ -318,11 +503,14 @@ function SideButton({
 }
 
 function renderRich(text: string) {
-  return text
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return escaped
     .replace(/\*\*([^*]+)\*\*/g, '<b style="color: var(--text-0); font-weight: 600">$1</b>')
-    .replace(/<b>([^<]+)<\/b>/g, '<b style="color: var(--text-0); font-weight: 600">$1</b>')
     .replace(
-      /<code>([^<]+)<\/code>/g,
+      /`([^`]+)`/g,
       '<code style="font-family: var(--f-mono); font-size: 0.92em; background: var(--bg-2); padding: 1px 5px; border-radius: 3px; color: var(--amber-dim)">$1</code>'
     );
 }
