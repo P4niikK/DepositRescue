@@ -4,7 +4,7 @@
 import { pool } from "./db";
 import {
   complete, parseJsonReply, MODEL_OPUS, MODEL_SONNET,
-} from "./anthropic";
+} from "./claude";
 import {
   EXPERT_SPECS, orchestratorSystem, judgeSystem, synthesizerSystem,
 } from "./experts";
@@ -49,7 +49,6 @@ export async function pickExperts(prompt: string) {
     system: orchestratorSystem(),
     user: `PREGUNTA:\n${prompt}`,
     model: MODEL_SONNET,
-    maxTokens: 300,
   });
   const parsed = parseJsonReply<{ selected: ExpertId[]; reasoning: string }>(raw);
   const filtered = parsed.selected.filter(
@@ -127,7 +126,6 @@ async function runTurn(
       system: EXPERT_SPECS[expert].system,
       user: buildUserForExpert(debate, roundN, expert, previousTurnsThisRound),
       model: MODEL_OPUS,
-      maxTokens: 700,
     });
     return { expert, content, ms: Date.now() - started };
   } catch (e) {
@@ -181,7 +179,6 @@ export async function runJudge(
       system: judgeSystem(),
       user: body,
       model: MODEL_SONNET,
-      maxTokens: 400,
     });
     const parsed = parseJsonReply<Judgement>(raw);
     // Force close if we hit max_rounds
@@ -217,7 +214,6 @@ export async function runSynthesis(
       system: synthesizerSystem(),
       user: body,
       model: MODEL_OPUS,
-      maxTokens: 600,
     });
     return parseJsonReply<Synthesis>(raw);
   } catch {

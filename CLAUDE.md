@@ -68,6 +68,21 @@ Matu and Feli work from different machines. Their Claude agents share a Postgres
 - No comments unless the *why* is non-obvious. Code should be self-explaining.
 - Follow the statute-grounding non-negotiables listed in the roadmap (section 2).
 
+## Cockpit: how the multi-agent features run
+
+The `/cockpit/ask` and `/cockpit/debate` endpoints do **not** call the Anthropic API directly. They spawn the local `claude` CLI with `--print --output-format json --system-prompt "<role>"`. This uses your existing Claude Code auth (OAuth / Max plan). No `ANTHROPIC_API_KEY` is needed.
+
+Requirements to run these features:
+- `claude` binary on PATH (it already is if you can read this from Claude Code)
+- Logged in (`claude` will prompt `/login` once if not)
+- Don't use the `--bare` flag in `lib/cockpit/claude.ts` — that would force strict API-key auth
+
+Models used:
+- Experts & Synthesizer: `opus`
+- Orchestrator & Judge: `sonnet` (cheaper turns, routing decisions don't need Opus)
+
+The spawned processes are sandboxed via `--disallowed-tools` (no Bash/Edit/Write/Read/WebFetch/etc) — the expert Claudes can only produce text. If you need them to use tools in the future, loosen that list in `lib/cockpit/claude.ts`.
+
 ## Tone
 
 - Matu and Feli are working under hackathon time pressure. Prefer short outputs, direct recommendations, and flag tradeoffs in one sentence. Do not pad.

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { pool, AUTHOR } from "@/lib/cockpit/db";
-import { complete, parseJsonReply, MODEL_OPUS } from "@/lib/cockpit/anthropic";
+import { complete, parseJsonReply, MODEL_OPUS } from "@/lib/cockpit/claude";
 import { EXPERT_SPECS, synthesizerSystem } from "@/lib/cockpit/experts";
 import type { ExpertId } from "@/lib/cockpit/data";
 
@@ -22,7 +22,6 @@ async function runExpert(expertId: ExpertId, prompt: string): Promise<Answer> {
       system: spec.system,
       user: prompt,
       model: MODEL_OPUS,
-      maxTokens: 800,
     });
     return { expert: expertId, status: "done", content, ms: Date.now() - started };
   } catch (e) {
@@ -56,7 +55,6 @@ async function synthesize(
       system: synthesizerSystem(),
       user: body,
       model: MODEL_OPUS,
-      maxTokens: 600,
     });
     return parseJsonReply(raw);
   } catch {
