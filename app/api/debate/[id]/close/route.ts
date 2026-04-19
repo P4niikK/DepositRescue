@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchDebate, runSynthesis, saveDebate } from "@/lib/cockpit/debate-flow";
+import { postSynthesisToFeed } from "@/lib/cockpit/feed-hooks";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -21,6 +22,14 @@ export async function POST(
 
     debate.data.synthesis = await runSynthesis(debate);
     const saved = await saveDebate(id, { status: "closed", data: debate.data });
+    if (saved.data.synthesis) {
+      await postSynthesisToFeed({
+        author: saved.author,
+        kind: "debate-closed",
+        refId: saved.id,
+        headline: saved.data.synthesis.headline,
+      });
+    }
     return NextResponse.json({ debate: saved });
   } catch (e) {
     return NextResponse.json(

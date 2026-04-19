@@ -5,6 +5,7 @@ import { complete, parseJsonReply, MODEL_OPUS } from "@/lib/cockpit/claude";
 import { EXPERT_SPECS, synthesizerSystem } from "@/lib/cockpit/experts";
 import { decisionsBlock, appendDecision } from "@/lib/cockpit/decisions";
 import { sessionDir } from "@/lib/cockpit/sandbox";
+import { postSynthesisToFeed } from "@/lib/cockpit/feed-hooks";
 import type { ExpertId } from "@/lib/cockpit/data";
 
 const ARTIFACT_HINT = `
@@ -133,6 +134,12 @@ export async function POST(req: Request) {
         } catch {
           // non-fatal
         }
+        await postSynthesisToFeed({
+          author: who,
+          kind: "ask-synthesized",
+          refId: askId,
+          headline: synthesis.headline,
+        });
       }
     }
 

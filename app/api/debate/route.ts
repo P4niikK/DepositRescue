@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/cockpit/db";
 import { whoFromRequest } from "@/lib/cockpit/who";
+import { postSynthesisToFeed } from "@/lib/cockpit/feed-hooks";
 import {
   pickExperts, runRound, runJudge, runSynthesis, saveDebate, type DebateData,
 } from "@/lib/cockpit/debate-flow";
@@ -81,6 +82,15 @@ export async function POST(req: Request) {
       round: 1,
       data: debate.data,
     });
+
+    if (status === "closed" && saved.data.synthesis) {
+      await postSynthesisToFeed({
+        author: saved.author,
+        kind: "debate-closed",
+        refId: saved.id,
+        headline: saved.data.synthesis.headline,
+      });
+    }
 
     return NextResponse.json({ debate: saved });
   } catch (e) {

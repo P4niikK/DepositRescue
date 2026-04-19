@@ -1,13 +1,34 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Pin, Clock, CalendarClock } from "lucide-react";
-import { ROADMAP } from "@/lib/cockpit/data";
+import { ROADMAP, TYPE_META, type UserId, type ActivityKind } from "@/lib/cockpit/data";
 import { hackathonStatus, type HackathonStatus } from "@/lib/cockpit/hackathon";
+import { timeAgo } from "@/lib/cockpit/format";
 import { Avatar } from "./avatar";
+import { useWho } from "./who-provider";
 import type { ReactNode } from "react";
 
+type PresenceEntry = {
+  author: UserId;
+  task: string;
+  kind: ActivityKind;
+  ts: string;
+};
+
+type RawJournalEntry = {
+  author: UserId;
+  task: string;
+  kind: ActivityKind;
+  ts: string;
+};
+
 export function Rail() {
+  const { fetchAs } = useWho();
   const [status, setStatus] = useState<HackathonStatus | null>(null);
+  const [presence, setPresence] = useState<Record<UserId, PresenceEntry | null>>({
+    matu: null,
+    feli: null,
+  });
 
   useEffect(() => {
     const tick = () => setStatus(hackathonStatus(new Date()));
@@ -16,21 +37,33 @@ export function Rail() {
     return () => clearInterval(t);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetchAs("/api/journal?limit=40", { cache: "no-store" });
+        if (!res.ok) return;
+        const { entries } = (await res.json()) as { entries: RawJournalEntry[] };
+        if (cancelled) return;
+        const next: Record<UserId, PresenceEntry | null> = { matu: null, feli: null };
+        for (const e of entries) {
+          if (!next[e.author]) next[e.author] = { author: e.author, task: e.task, kind: e.kind, ts: e.ts };
+        }
+        setPresence(next);
+      } catch {
+        /* ignore */
+      }
+    };
+    load();
+    const t = setInterval(load, 15_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [fetchAs]);
+
   return (
     <aside className="sticky top-12 hidden h-[calc(100vh-3rem)] w-72 shrink-0 flex-col gap-3 overflow-y-auto border-l border-[var(--border-1)] bg-[var(--bg-0)] p-3 xl:flex">
       <Block title="PRESENCIA" right={<LiveIndicator />}>
-        <PresenceCard
-          who="matu"
-          since="—"
-          doing="Presencia real se cablea al journal en próxima pasada"
-          file="journal placeholder"
-        />
-        <PresenceCard
-          who="feli"
-          since="—"
-          doing="Presencia real se cablea al journal en próxima pasada"
-          file="journal placeholder"
-        />
+        <PresenceCard who="matu" entry={presence.matu} />
+        <PresenceCard who="feli" entry={presence.feli} />
       </Block>
 
       {status && <HackathonBlock status={status} />}
@@ -176,35 +209,43 @@ function LiveIndicator() {
 
 function PresenceCard({
   who,
-  since,
-  doing,
-  file,
+  entry,
 }: {
-  who: "matu" | "feli";
-  since: string;
-  doing: string;
-  file: string;
+  who: UserId;
+  entry: PresenceEntry | null;
 }) {
+  const name = who === "matu" ? "Matu" : "Feli";
+  if (!entry) {
+    return (
+      <div className="rounded-md border border-dashed border-[var(--border-1)] bg-[var(--bg-1)] px-3 py-2.5 opacity-80">
+        <div className="flex items-center gap-2 text-[11px]">
+          <Avatar who={who} size={20} />
+          <span className="font-medium text-[var(--text-0)]">{name}</span>
+          <span className="ml-auto font-mono text-[10px] text-[var(--text-3)]">—</span>
+        </div>
+        <p className="mt-1.5 text-[11.5px] text-[var(--text-3)]">sin actividad reciente</p>
+      </div>
+    );
+  }
+  const meta = TYPE_META[entry.kind];
   return (
     <div className="rounded-md border border-[var(--border-1)] bg-[var(--bg-1)] px-3 py-2.5">
       <div className="flex items-center gap-2 text-[11px]">
         <Avatar who={who} size={20} />
-        <span className="font-medium text-[var(--text-0)]">
-          {who === "matu" ? "Matu" : "Feli"}
-        </span>
+        <span className="font-medium text-[var(--text-0)]">{name}</span>
         <span className="ml-auto flex items-center gap-1 font-mono text-[10px] text-[var(--text-3)]">
-          <Clock size={10} /> {since}
+          <Clock size={10} /> {timeAgo(entry.ts)}
         </span>
       </div>
-      <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--text-1)]">
-        {doing}
+      <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--text-1)] line-clamp-2">
+        {entry.task}
       </p>
-      <div className="mt-1.5 flex items-center gap-1.5 font-mono text-[10px] text-[var(--text-3)]">
+      <div className="mt-1.5 flex items-center gap-1.5 font-mono text-[10px]">
         <span
-          className="inline-block h-1 w-1 rounded-full"
-          style={{ background: "var(--amber)" }}
+          className="inline-block h-1.5 w-1.5 rounded-full"
+          style={{ background: meta.colorVar }}
         />
-        {file}
+        <span style={{ color: meta.colorVar }}>{meta.label}</span>
       </div>
     </div>
   );

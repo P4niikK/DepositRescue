@@ -1,6 +1,6 @@
-import { ROADMAP } from "@/lib/cockpit/data";
 import { cn } from "@/lib/cockpit/utils";
 import { hackathonStatus, roadmapDayStatus } from "@/lib/cockpit/hackathon";
+import { parseRoadmap } from "@/lib/cockpit/roadmap-parser";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +14,23 @@ const STATUS_STYLES: Record<
   upcoming: { color: "var(--text-3)",     label: "upcoming" },
 };
 
+function formatMtime(iso: string | null): string {
+  if (!iso) return "never";
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${d.getDate()}/${d.getMonth() + 1} ${hh}:${mm}`;
+}
+
 export default function RoadmapPage() {
   const h = hackathonStatus();
-  const days = ROADMAP.days.map((d) => ({
+  const parsed = parseRoadmap();
+
+  const days = parsed.days.map((d) => ({
     ...d,
     status: roadmapDayStatus(d.n, d.total ? d.done / d.total : 0, h),
   }));
+
   const totalDone = days.reduce((a, d) => a + d.done, 0);
   const total = days.reduce((a, d) => a + d.total, 0);
   const lateCount = days.filter((d) => d.status === "late").length;
@@ -28,14 +39,25 @@ export default function RoadmapPage() {
     h.phase === "pre" ? `pre · D-${h.daysUntilKickoff}` :
     h.phase === "submit" ? "submit" : "post";
 
+  const todayDay = h.phase === "during" ? days.find((d) => d.n === h.day) : null;
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5 p-6">
       <header>
         <h1 className="text-[22px] font-semibold text-[var(--text-0)]">Roadmap</h1>
         <p className="font-mono text-[11px] text-[var(--text-3)]">
-          parseado de <span className="text-[var(--amber-dim)]">{ROADMAP.file}</span> · auto-sync
+          parseado de <span className="text-[var(--amber-dim)]">{parsed.file}</span>
+          {" · "}
+          last modified {formatMtime(parsed.mtime)}
         </p>
       </header>
+
+      {days.length === 0 && (
+        <div className="rounded-md border border-dashed border-[var(--border-2)] bg-[var(--bg-1)] px-4 py-6 text-center font-mono text-[11px] text-[var(--text-3)]">
+          No encontré <code>docs/ROADMAP.md</code> o no tiene headers
+          <code> ### Día N — …</code>.
+        </div>
+      )}
 
       <section className="rounded-md border border-[var(--border-1)] bg-[var(--bg-1)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -44,7 +66,7 @@ export default function RoadmapPage() {
               DepositRescue · 7-day hackathon
             </div>
             <div className="mt-0.5 font-mono text-[10px] text-[var(--text-3)]">
-              ROADMAP.md · last parsed 00:42
+              auto-sync: al recargar la página se re-parsea el .md
             </div>
           </div>
           <div className="flex items-center gap-4 font-mono text-[11px]">
@@ -58,42 +80,45 @@ export default function RoadmapPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex gap-2">
-          {days.map((d) => {
-            const s = STATUS_STYLES[d.status];
-            const pct = (d.done / d.total) * 100;
-            return (
-              <div
-                key={d.n}
-                className={cn(
-                  "flex-1 rounded-md border p-2.5",
-                  d.status === "today" && "border-[var(--amber-border)] bg-[var(--amber-soft)]/40",
-                  d.status !== "today" && "border-[var(--border-1)] bg-[var(--bg-2)]"
-                )}
-              >
-                <div className="flex items-baseline justify-between">
-                  <span className="font-mono text-[11px] font-semibold" style={{ color: s.color }}>
-                    {d.label}
-                  </span>
-                  <span className="font-mono text-[9px] text-[var(--text-3)]">
-                    {d.done}/{d.total}
-                  </span>
+        {days.length > 0 && (
+          <div className="mt-4 flex gap-2">
+            {days.map((d) => {
+              const s = STATUS_STYLES[d.status];
+              const pct = d.total ? (d.done / d.total) * 100 : 0;
+              return (
+                <div
+                  key={d.n}
+                  className={cn(
+                    "flex-1 rounded-md border p-2.5",
+                    d.status === "today" && "border-[var(--amber-border)] bg-[var(--amber-soft)]/40",
+                    d.status !== "today" && "border-[var(--border-1)] bg-[var(--bg-2)]"
+                  )}
+                >
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-mono text-[11px] font-semibold" style={{ color: s.color }}>
+                      D{d.n}
+                    </span>
+                    <span className="font-mono text-[9px] text-[var(--text-3)]">
+                      {d.done}/{d.total}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-1 rounded-full bg-[var(--bg-3)]">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${pct}%`, background: s.color }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-1.5 h-1 rounded-full bg-[var(--bg-3)]">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${pct}%`, background: s.color }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section className="space-y-2">
         {days.map((d) => {
           const s = STATUS_STYLES[d.status];
+          const showTasks = d.n === todayDay?.n;
           return (
             <article
               key={d.n}
@@ -117,9 +142,9 @@ export default function RoadmapPage() {
                     · {d.done}/{d.total}
                   </span>
                 </h4>
-                {d.status === "today" && (
+                {showTasks && d.tasks.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {ROADMAP.todayTasks.map((t, i) => (
+                    {d.tasks.slice(0, 8).map((t, i) => (
                       <span
                         key={i}
                         className={cn(
@@ -131,11 +156,24 @@ export default function RoadmapPage() {
                       >
                         <span
                           className="h-1.5 w-1.5 rounded-full"
-                          style={{ background: t.done ? "var(--c-finished)" : "var(--amber)" }}
+                          style={{
+                            background: t.done
+                              ? "var(--c-finished)"
+                              : t.owner === "matu"
+                              ? "oklch(72% 0.11 230)"
+                              : t.owner === "feli"
+                              ? "oklch(72% 0.10 155)"
+                              : "var(--amber)",
+                          }}
                         />
-                        {t.t}
+                        {t.text.length > 60 ? t.text.slice(0, 60) + "…" : t.text}
                       </span>
                     ))}
+                    {d.tasks.length > 8 && (
+                      <span className="font-mono text-[10px] text-[var(--text-3)]">
+                        +{d.tasks.length - 8} más
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

@@ -13,9 +13,10 @@ export default async function CockpitLayout({
   const c = await cookies();
   const v = c.get(WHO_COOKIE)?.value;
   const initial = isWho(v) ? v : "matu";
+  const hadCookie = isWho(v);
 
   return (
-    <WhoProvider initial={initial}>
+    <WhoProvider initial={initial} hadCookie={hadCookie}>
       <div className="flex min-h-screen flex-col">
         <Topbar />
         <div className="flex flex-1">
