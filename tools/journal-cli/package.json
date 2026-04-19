@@ -1,0 +1,14 @@
+{
+  "name": "depositrescue-journal",
+  "version": "0.1.0",
+  "description": "Shared journal CLI for Matu/Feli Claude agents on DepositRescue",
+  "bin": {
+    "journal": "./index.js"
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
+  },
+  "type": "commonjs",
+  "license": "UNLICENSED",
+  "private": true
+}

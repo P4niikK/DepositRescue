@@ -1,0 +1,8 @@
+{
+  "host": "100.82.217.45",
+  "port": 5432,
+  "user": "journal",
+  "password": "<ASK MATU>",
+  "database": "depositrescue",
+  "author": "feli"
+}

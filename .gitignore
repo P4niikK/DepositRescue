@@ -1,0 +1,49 @@
+# Secrets — NEVER commit these
+.env
+.env.*
+!.env.example
+**/config.json
+!tools/journal-cli/config.example.json
+.depositrescue/
+pg_*.txt
+*.pem
+*.key
+*secret*
+*credentials*
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds
+.next/
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Logs & caches
+*.log
+.cache/
+.parcel-cache/
+.turbo/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code local settings (may include machine-specific paths)
+.claude/settings.local.json
+.claude/*.local.*
+
+# Temp / scratch
+tmp/
+scratch/
+*.tmp
