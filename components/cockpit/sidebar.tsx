@@ -6,21 +6,22 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cockpit/utils";
+import { HackathonFooter, HackathonDayBadge } from "./hackathon-clock";
 
 type NavItem = {
   href: string;
   label: string;
   icon: ReactNode;
-  badge?: string | number;
+  badge?: ReactNode;
   live?: boolean;
 };
 
 const NAV: NavItem[] = [
-  { href: "/cockpit/feed",      label: "Activity",     icon: <Rss size={14} />,          badge: 12 },
-  { href: "/cockpit/checklist", label: "Checklist",    icon: <CheckSquare size={14} />,  badge: 8 },
+  { href: "/cockpit/feed",      label: "Activity",     icon: <Rss size={14} /> },
+  { href: "/cockpit/checklist", label: "Checklist",    icon: <CheckSquare size={14} /> },
   { href: "/cockpit/debate",    label: "Debates",      icon: <MessagesSquare size={14} />, live: true },
   { href: "/cockpit/ask",       label: "Ask the team", icon: <CircleHelp size={14} /> },
-  { href: "/cockpit/roadmap",   label: "Roadmap",      icon: <Map size={14} />,          badge: "D5" },
+  { href: "/cockpit/roadmap",   label: "Roadmap",      icon: <Map size={14} />, badge: <HackathonDayBadge /> },
 ];
 
 export function Sidebar() {
@@ -48,7 +49,7 @@ export function Sidebar() {
               </span>
               <span className="flex-1">{it.label}</span>
               {it.live && <span className="pulse-dot" />}
-              {!it.live && it.badge !== undefined && (
+              {!it.live && it.badge !== undefined && it.badge !== null && (
                 <span className="rounded bg-[var(--bg-2)] px-1.5 font-mono text-[10px] text-[var(--text-3)]">
                   {it.badge}
                 </span>
@@ -64,10 +65,8 @@ export function Sidebar() {
         <PinnedItem>Skill por estado</PinnedItem>
       </div>
 
-      <div className="mt-auto border-t border-[var(--border-1)] pt-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-3)]">
-        <div>hackathon</div>
-        <div className="my-1 text-[var(--amber-dim)]">DAY 5 / 7 · 03:42</div>
-        <div>uptime 4d 11h</div>
+      <div className="mt-auto border-t border-[var(--border-1)] pt-3">
+        <HackathonFooter />
       </div>
     </aside>
   );

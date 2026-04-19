@@ -1,5 +1,8 @@
 import { ROADMAP } from "@/lib/cockpit/data";
 import { cn } from "@/lib/cockpit/utils";
+import { hackathonStatus, roadmapDayStatus } from "@/lib/cockpit/hackathon";
+
+export const dynamic = "force-dynamic";
 
 const STATUS_STYLES: Record<
   string,
@@ -12,9 +15,18 @@ const STATUS_STYLES: Record<
 };
 
 export default function RoadmapPage() {
-  const totalDone = ROADMAP.days.reduce((a, d) => a + d.done, 0);
-  const total = ROADMAP.days.reduce((a, d) => a + d.total, 0);
-  const lateCount = ROADMAP.days.filter((d) => d.status === "late").length;
+  const h = hackathonStatus();
+  const days = ROADMAP.days.map((d) => ({
+    ...d,
+    status: roadmapDayStatus(d.n, d.total ? d.done / d.total : 0, h),
+  }));
+  const totalDone = days.reduce((a, d) => a + d.done, 0);
+  const total = days.reduce((a, d) => a + d.total, 0);
+  const lateCount = days.filter((d) => d.status === "late").length;
+  const dayLabel =
+    h.phase === "during" ? `${h.day}/7` :
+    h.phase === "pre" ? `pre · D-${h.daysUntilKickoff}` :
+    h.phase === "submit" ? "submit" : "post";
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5 p-6">
@@ -37,7 +49,7 @@ export default function RoadmapPage() {
           </div>
           <div className="flex items-center gap-4 font-mono text-[11px]">
             <Stat label="progreso" value={`${totalDone}/${total}`} />
-            <Stat label="día" value="5/7" />
+            <Stat label="día" value={dayLabel} />
             <Stat
               label="atrasados"
               value={String(lateCount)}
@@ -47,7 +59,7 @@ export default function RoadmapPage() {
         </div>
 
         <div className="mt-4 flex gap-2">
-          {ROADMAP.days.map((d) => {
+          {days.map((d) => {
             const s = STATUS_STYLES[d.status];
             const pct = (d.done / d.total) * 100;
             return (
@@ -80,7 +92,7 @@ export default function RoadmapPage() {
       </section>
 
       <section className="space-y-2">
-        {ROADMAP.days.map((d) => {
+        {days.map((d) => {
           const s = STATUS_STYLES[d.status];
           return (
             <article
