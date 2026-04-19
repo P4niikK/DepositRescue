@@ -47,3 +47,7 @@ desktop.ini
 tmp/
 scratch/
 *.tmp
+
+# Design handoff bundle (kept locally as reference, not committed)
+design-import/
+scaffold-tmp/
