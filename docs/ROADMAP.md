@@ -3,7 +3,7 @@
 **Hackathon:** Built with Opus 4.7 (Cerebral Valley x Anthropic)
 **Fechas:** 21-28 abril 2026
 **Team:** Matu + Feli
-**Submission deadline:** Lunes 28 abril
+**Submission deadline:** Martes 28 abril
 **Prize pool:** $100K en API credits
 
 ---
@@ -16,8 +16,8 @@
 
 ### El problema
 
-- 44M renters en US
-- ~$7-12B en depósitos retenidos ilegalmente cada año
+- 44M renters en US <!-- fuente? -->
+- ~$7-12B en depósitos retenidos ilegalmente cada año <!-- fuente? -->
 - Las leyes estatales son fuertes (CA, MA, WI permiten 2-3x damages) pero casi nadie las usa
 - Un reclamo de $2,000 no justifica un abogado de $300/hr
 - Small claims court se siente opaco para la mayoría
@@ -187,7 +187,7 @@ Output: Demand letter PDF + Small claims filing package
 │   └── damages-calculation.md
 ├── new-york-deposits/
 │   ├── SKILL.md
-│   ├── statute-rpl-7-108.md
+│   ├── statute-gol-7-108.md <!-- VERIFICAR: era statute-rpl-7-108.md; NY security deposits están en General Obligations Law, no Real Property Law. -->
 │   └── ...
 ├── texas-deposits/
 ├── florida-deposits/
@@ -236,6 +236,7 @@ Output: Demand letter PDF + Small claims filing package
   "citation": "CA Civ Code §1950.5(e), Kendall v. Pestana (1985)"
 }
 ```
+<!-- VERIFICAR: Kendall v. Pestana (1985) trata asignación de leases comerciales, no wear-and-tear. Reemplazar por case law CA aplicable a ordinary wear. -->
 Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `insufficient_evidence`
 
 **3. Deduction Validator**
@@ -298,7 +299,7 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 
 ## 6. Schedule 7 días
 
-### Pre-work — Sábado 19 abril
+### Pre-work — Sábado 18 abril
 
 **Feli (6 hs):**
 - [x] Completar registration Cerebral Valley
@@ -321,7 +322,7 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
   - IL: 765 ILCS 710
   - GA: O.C.G.A. § 44-7-30 al 37
   - NC: NCGS § 42-50 al 56
-  - PA: 68 Pa.C.S. § 250.511a al 512
+  - PA: 68 P.S. § 250.511a al 512 <!-- VERIFICAR: el Landlord and Tenant Act está en Purdon's Statutes (P.S.), no en Pa.C.S. -->
   - OH: ORC § 5321.16
   - MI: MCL § 554.601 al 616
 - [ ] Setup técnico base:
@@ -341,7 +342,7 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 
 ---
 
-### Domingo 20 abril (pre-kickoff)
+### Domingo 19 abril (pre-kickoff)
 
 **Feli (6-8 hs):**
 - [ ] Responder todos los DMs que llegaron
@@ -369,7 +370,7 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 
 ---
 
-### Día 1 — Lunes 21 abril (KICKOFF OFICIAL)
+### Día 1 — Martes 21 abril (KICKOFF OFICIAL)
 
 **Matu (10 hs):**
 - [ ] Core agent loop en Claude Code: input → jurisdiction detection → load skill → run subagents → output
@@ -388,7 +389,7 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 
 ---
 
-### Día 2 — Martes 22 abril
+### Día 2 — Miércoles 22 abril
 
 **Matu (10 hs):**
 - [ ] Subagents para NY + TX (copiar pattern de CA, adaptar a statutes locales)
@@ -407,7 +408,7 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 
 ---
 
-### Día 3 — Miércoles 23 abril
+### Día 3 — Jueves 23 abril
 
 **Matu (10 hs):**
 - [ ] Letter Drafter subagent: genera demand letter citando statutes específicas. Usa templates por estado
@@ -426,7 +427,7 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 
 ---
 
-### Día 4 — Jueves 24 abril
+### Día 4 — Viernes 24 abril
 
 **Matu (10 hs):**
 - [ ] Expandir a NC + PA + OH + MI (últimos 4 estados)
@@ -446,7 +447,7 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 
 ---
 
-### Día 5 — Viernes 25 abril
+### Día 5 — Sábado 25 abril
 
 **Matu (8-10 hs):**
 - [ ] Bug bash: testing adversarial (leases raros, fotos borrosas, edge cases)
@@ -465,7 +466,7 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 
 ---
 
-### Día 6 — Sábado 26 abril (buffer day crítico)
+### Día 6 — Domingo 26 abril (buffer day crítico)
 
 Este día es para resolver los 3-5 problemas que inevitablemente surgen.
 
@@ -478,11 +479,11 @@ Este día es para resolver los 3-5 problemas que inevitablemente surgen.
 
 ---
 
-### Día 7 — Domingo 27 abril
+### Día 7 — Lunes 27 abril
 
 **Mañana:**
 - [ ] Last polish
-- [ ] Submission del project (antes de que arranque deadline del lunes)
+- [ ] Submission del project (antes de que arranque deadline del martes)
 - [ ] Backup de todo (video en 2 plataformas, repo público, landing page live)
 
 **Tarde:**
@@ -490,7 +491,7 @@ Este día es para resolver los 3-5 problemas que inevitablemente surgen.
 
 ---
 
-### Lunes 28 abril — Submission day
+### Martes 28 abril — Submission day
 
 - Submission ya debería estar hecha
 - Monitorear si piden cosas adicionales
@@ -500,11 +501,11 @@ Este día es para resolver los 3-5 problemas que inevitablemente surgen.
 
 ## 7. Criterios de éxito por hito
 
-- **Sábado 19 noche:** Register completo ✅, 25+ DMs enviadas, abogado AR contactado, statutes descargados, repo setup.
-- **Lunes 21 noche:** CA funciona end-to-end (ugly but working).
-- **Miércoles 23 noche:** 6 estados funcionando, demand letter generable.
-- **Viernes 25 noche:** 10 estados, small claims package, demo video v1, pitch v2.
-- **Domingo 27 noche:** Submission hecha, video final, landing page live.
+- **Sábado 18 noche:** Register completo ✅, 25+ DMs enviadas, abogado AR contactado, statutes descargados, repo setup.
+- **Martes 21 noche:** CA funciona end-to-end (ugly but working).
+- **Jueves 23 noche:** 6 estados funcionando, demand letter generable.
+- **Sábado 25 noche:** 10 estados, small claims package, demo video v1, pitch v2.
+- **Lunes 27 noche:** Submission hecha, video final, landing page live.
 
 ---
 
@@ -563,7 +564,8 @@ Sarah's recoverable amount: $7,200. Including 2x statutory penalties for bad fai
 
 ### Legal sources
 - CA Civil Code §1950.5: https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?sectionNum=1950.5.&lawCode=CIV
-- NY RPL §7-108: https://www.nysenate.gov/legislation/laws/RPP/7-108
+- NY GOL §7-108: https://www.nysenate.gov/legislation/laws/GOB/7-108 <!-- VERIFICAR: NY security deposits viven en General Obligations Law §§7-103 a 7-108, no en RPL. La URL original apuntaba a /RPP/7-108 que es incorrecto. -->
+- NY RPL §§ 234-238 (attorney fees, habitability): https://www.nysenate.gov/legislation/laws/RPP
 - TX Property Code §92.101-109: https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm
 - (completar con otros estados durante setup)
 
