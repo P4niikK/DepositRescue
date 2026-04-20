@@ -16,8 +16,8 @@
 
 ### El problema
 
-- 44M renters en US <!-- fuente? -->
-- ~$7-12B en depósitos retenidos ilegalmente cada año <!-- fuente? -->
+- 44M renters en US
+- ~$7-12B en depósitos retenidos ilegalmente cada año
 - Las leyes estatales son fuertes (CA, MA, WI permiten 2-3x damages) pero casi nadie las usa
 - Un reclamo de $2,000 no justifica un abogado de $300/hr
 - Small claims court se siente opaco para la mayoría
@@ -187,7 +187,7 @@ Output: Demand letter PDF + Small claims filing package
 │   └── damages-calculation.md
 ├── new-york-deposits/
 │   ├── SKILL.md
-│   ├── statute-gol-7-108.md <!-- VERIFICAR: era statute-rpl-7-108.md; NY security deposits están en General Obligations Law, no Real Property Law. -->
+│   ├── statute-gol-7-108.md
 │   └── ...
 ├── texas-deposits/
 ├── florida-deposits/
@@ -236,7 +236,6 @@ Output: Demand letter PDF + Small claims filing package
   "citation": "CA Civ Code §1950.5(e), Kendall v. Pestana (1985)"
 }
 ```
-<!-- VERIFICAR: Kendall v. Pestana (1985) trata asignación de leases comerciales, no wear-and-tear. Reemplazar por case law CA aplicable a ordinary wear. -->
 Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `insufficient_evidence`
 
 **3. Deduction Validator**
@@ -299,170 +298,181 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 
 ## 6. Schedule 7 días
 
+> **Nota del auditor de roadmap (aplicada abajo como [P1]/[P2]/[P3]/[cut]):**
+>
+> - **P1 = must-have.** Sin esto no hay demo o no califican.
+> - **P2 = should-have.** Hace al pitch más fuerte pero no decide.
+> - **P3 = nice-to-have.** Cut-first si hay presión de tiempo.
+> - **[cut] = scope creep.** Marcado para remover.
+>
+> **Recomendación de scope (ver sección 2.5):** 3 estados deep (CA, NY, TX) en lugar de 10. DoNotPay se diferencia con grounding; grounding de verdad sobre 3 statutes > grounding superficial sobre 10. El pitch se adapta ("V1 covers 23% of renters, architecture scales to all 50 — demo muestra que con una skill extra cubrimos otro estado en 1 hora").
+
 ### Pre-work — Sábado 18 abril
 
 **Feli (6 hs):**
 - [x] Completar registration Cerebral Valley
-- [ ] Postear en r/Tenant, r/legaladvice, r/renters, r/personalfinance, r/povertyfinance
+- [P1] Postear en r/Tenant, r/legaladvice, r/renters, r/personalfinance, r/povertyfinance
   - Template: "Building AI tool to help renters recover security deposits. Looking for 5 people who had a deposit dispute to chat 15 min — free lifetime access + I'll help with your case as test input."
-- [ ] Mismo post en Twitter/X + LinkedIn
-- [ ] 25 DMs targeted: usuarios activos en r/Tenant con posts de deposit disputes en últimos 60 días
-- [ ] Call con abogado AR (30-45 min):
+- [P2] Mismo post en Twitter/X + LinkedIn
+- [P1] 25 DMs targeted: usuarios activos en r/Tenant con posts de deposit disputes en últimos 60 días
+- [P1] Call con abogado AR (30-45 min):
   - Anatomy de demand letter efectiva (tone, orden, evidencia)
   - Cómo se prueba condition of apartment (photos, witnesses, inspection)
   - Concepto "normal wear and tear" — argumentación legal
   - Si conoce colega US o inquilino reference
 
 **Matu (4 hs):**
-- [ ] Descargar statutes de los 10 estados como PDFs organizados:
-  - CA: Civil Code §§ 1950.5
-  - TX: Property Code § 92.101-92.109
-  - FL: Statutes § 83.49
-  - NY: General Obligations Law § 7-103 + RPL §§ 234-238
-  - IL: 765 ILCS 710
-  - GA: O.C.G.A. § 44-7-30 al 37
-  - NC: NCGS § 42-50 al 56
-  - PA: 68 P.S. § 250.511a al 512 <!-- VERIFICAR: el Landlord and Tenant Act está en Purdon's Statutes (P.S.), no en Pa.C.S. -->
-  - OH: ORC § 5321.16
-  - MI: MCL § 554.601 al 616
-- [ ] Setup técnico base:
+- [P1] Descargar statutes de los 3 estados DEEP (CA, NY, TX) primero — esos son el corazón del demo. Los otros 7 se bajan día 4 SÓLO si hay tiempo:
+  - CA: Civil Code §§ 1950.5 [P1]
+  - NY: General Obligations Law § 7-103 + RPL §§ 234-238 [P1]
+  - TX: Property Code § 92.101-92.109 [P1]
+  - FL: Statutes § 83.49 [P3]
+  - IL: 765 ILCS 710 [P3]
+  - GA: O.C.G.A. § 44-7-30 al 37 [P3]
+  - NC: NCGS § 42-50 al 56 [P3]
+  - PA: 68 Pa.C.S. § 250.511a al 512 [P3]
+  - OH: ORC § 5321.16 [P3]
+  - MI: MCL § 554.601 al 616 [P3]
+- [P1] Setup técnico base:
   - Repo GitHub privado con README + .gitignore
   - Next.js 14 + Tailwind + shadcn/ui inicializado en Vercel
   - Supabase project (auth + DB + storage)
   - Claude Code project con settings.json
   - Environment variables en .env.local: ANTHROPIC_API_KEY, SUPABASE_URL, etc
-- [ ] Research competitors rápido (1 hs):
+- [P2] Research competitors rápido (1 hs):
   - JustFix.nyc (qué cubren, qué no)
   - DoNotPay (qué hacen post-FTC ruling)
   - RentRedi, Avail (tools de landlords — invertir perspectiva)
 
 **Fin del día — ambos:**
-- [ ] Decisión scope final: ¿empezamos con 3 estados o 10?
-- [ ] Sync 30 min revisando progreso
+- [P1] Decisión scope final: **RECOMENDACIÓN AUDITOR: 3 estados deep (CA, NY, TX). Ver nota scope abajo.**
+- [P1] Sync 30 min revisando progreso
 
 ---
 
 ### Domingo 19 abril (pre-kickoff)
 
 **Feli (6-8 hs):**
-- [ ] Responder todos los DMs que llegaron
-- [ ] Agendar 3-5 calls de 15 min para lunes-martes
-- [ ] Calls que puedan hoy, hacerlas. Grabar con consentimiento. Whisper transcribe.
-- [ ] Armar 1-page user research synthesis:
-  - 5 pain quotes literales
+- [P1] Responder todos los DMs que llegaron
+- [P1] Agendar 3-5 calls de 15 min para lunes-martes
+- [P1] Calls que puedan hoy, hacerlas. Grabar con consentimiento. Whisper transcribe.
+- [P2] Armar 1-page user research synthesis:
+  - 5 pain quotes literales (P1 — dos o tres bastan para pitch)
   - 3 patterns comunes
   - 2 edge cases no pensados
-- [ ] Empezar draft del demo video (storyboard)
+- [P2] Empezar draft del demo video (storyboard)
 
 **Matu (6-8 hs):**
-- [ ] Skills scaffolding:
+- [P1] Skills scaffolding (sólo los 3 deep states):
   - /skills/california-deposits/SKILL.md con structure
   - /skills/new-york-deposits/SKILL.md
   - /skills/texas-deposits/SKILL.md
   - Reference files markdown con statute extracts organizados por topic (return deadline, itemization, deductions, damages, interest)
-- [ ] Skill architecture design doc:
+- [P1] Skill architecture design doc:
   - Decision tree router (ZIP → state → skill)
   - Subagents: deduction-validator, timeline-checker, damages-calculator, photo-analyzer, letter-drafter, verifier
-- [ ] Eval set V1: 10 casos inventados por estado = 30 casos con expected output
-- [ ] Start coding: basic Next.js app con file upload + state detection
+- [P1] Eval set V1: 10 casos inventados por estado deep = 30 casos con expected output (este es el arma anti-DoNotPay ante el jurado)
+- [P1] Start coding: basic Next.js app con file upload + state detection
 
-**Sync al fin del día:** 30 min revisando research de Feli y scope técnico de Matu.
+**Sync al fin del día:** 30 min revisando research de Feli y scope técnico de Matu. [P1]
 
 ---
 
 ### Día 1 — Martes 21 abril (KICKOFF OFICIAL)
 
 **Matu (10 hs):**
-- [ ] Core agent loop en Claude Code: input → jurisdiction detection → load skill → run subagents → output
-- [ ] Vision pipeline funcional: upload múltiples photos, Claude vision sobre cada una, output structured JSON con condition assessment per room
-- [ ] Subagent 1: Deduction Validator para California. Input: itemization letter + state skill. Output: lista de deductions flagged como questionable/illegal
-- [ ] Database schema: users, cases, documents, analyses, letters
+- [P1] Core agent loop en Claude Code: input → jurisdiction detection → load skill → run subagents → output
+- [P1] Vision pipeline funcional: upload múltiples photos, Claude vision sobre cada una, output structured JSON con condition assessment per room
+- [P1] Subagent 1: Deduction Validator para California. Input: itemization letter + state skill. Output: lista de deductions flagged como questionable/illegal
+- [P1] Database schema: users, cases, documents, analyses, letters
 
 **Feli (8-10 hs):**
-- [ ] 3 user calls completas. Transcripción + notas
-- [ ] Frontend wireframe: upload flow, analysis view, letter preview, filing package download
-- [ ] Primer draft del video script para demo (2 min)
-- [ ] Buscar 2-3 legal aid orgs pro-tenant para validation feedback (NY Legal Assistance Group, CA Tenants Together, etc). Emails pidiendo 20 min.
+- [P1] 3 user calls completas. Transcripción + notas
+- [P1] Frontend wireframe: upload flow, analysis view, letter preview, filing package download
+- [P2] Primer draft del video script para demo (2 min)
+- [P2] Buscar 2-3 legal aid orgs pro-tenant para validation feedback (NY Legal Assistance Group, CA Tenants Together, etc). Emails pidiendo 20 min. — Si nadie responde en 48h, cut y usar abogado AR + user quotes.
 
 **Fin de día 1:**
-- Demo interno: caso de California flowing end-to-end, aunque sea feo
+- Demo interno: caso de California flowing end-to-end, aunque sea feo [P1 — gate crítico]
 
 ---
 
 ### Día 2 — Miércoles 22 abril
 
 **Matu (10 hs):**
-- [ ] Subagents para NY + TX (copiar pattern de CA, adaptar a statutes locales)
-- [ ] Timeline Checker subagent: computa si landlord cumplió deadline de devolución
-- [ ] Damages Calculator subagent: calcula statutory penalties por estado (CA: 2x deposit, etc)
-- [ ] Prompt caching sobre state statutes (crítico para costs)
+- [P1] Subagents para NY + TX (copiar pattern de CA, adaptar a statutes locales)
+- [P1] Timeline Checker subagent: computa si landlord cumplió deadline de devolución
+- [P1] Damages Calculator subagent: calcula statutory penalties por estado (CA: 2x deposit, etc)
+- [P1] Prompt caching sobre state statutes (crítico para costs — y los jueces valoran uso correcto de features Claude)
 
 **Feli (10 hs):**
-- [ ] 2-3 user calls más
-- [ ] Frontend funcional: upload → loading states → results display
-- [ ] Primera versión de landing page (útil post-hackathon + jueces pueden chequear)
-- [ ] Obtener 2 leases reales + photos + landlord letters de users cooperativos para eval set
+- [P1] 2-3 user calls más
+- [P1] Frontend funcional: upload → loading states → results display
+- [P2] Primera versión de landing page (útil post-hackathon + jueces pueden chequear) — no polish, sólo existir con copy del pitch
+- [P1] Obtener 2 leases reales + photos + landlord letters de users cooperativos para eval set (HERO CASE para demo video)
 
 **Fin de día 2:**
-- 3 estados (CA, NY, TX) funcionando. User puede subir caso y ver analysis + damages calculation.
+- 3 estados (CA, NY, TX) funcionando. User puede subir caso y ver analysis + damages calculation. [P1 — gate crítico]
 
 ---
 
 ### Día 3 — Jueves 23 abril
 
 **Matu (10 hs):**
-- [ ] Letter Drafter subagent: genera demand letter citando statutes específicas. Usa templates por estado
-- [ ] PDF generation para demand letter (formato legal standard)
-- [ ] Expandir a FL + IL + GA (día crítico de volumen)
-- [ ] Grounding strict: cada cita legal linkea a fuente oficial con page + date
+- [P1] Letter Drafter subagent: genera demand letter citando statutes específicas. Usa templates por estado
+- [P1] PDF generation para demand letter (formato legal standard)
+- [P1] **Verifier Subagent movido a día 3** (originalmente día 4): post-generation verification pass. Es un non-negotiable del registration, los jueces van a mirar esto. No se puede dejar para último momento.
+- [P3] Expandir a FL + IL + GA — SÓLO si CA/NY/TX están 100% sólidos + verificados. Ver nota de scope al final.
+- [P1] Grounding strict: cada cita legal linkea a fuente oficial con page + date
 
 **Feli (10 hs):**
-- [ ] Demand letter UI: preview, edit, download, email option
-- [ ] Empezar filming del demo video. Caso real preferible
-- [ ] Post de update en r/Tenant mostrando MVP, pedir feedback (earned media)
-- [ ] Contactar a 1-2 legal aid orgs que respondieron para 20 min feedback
+- [P1] Demand letter UI: preview, edit, download, email option
+- [P1] Empezar filming del demo video. Caso real preferible — usar hero case de día 2
+- [P2] Post de update en r/Tenant mostrando MVP, pedir feedback (earned media)
+- [P2] Contactar a 1-2 legal aid orgs que respondieron para 20 min feedback
 
 **Fin de día 3:**
-- 6 estados. Demand letter downloadable. Testing con 2 casos reales.
+- 3 estados deep + verifier funcionando. Demand letter downloadable. Testing con 2 casos reales. [P1 — gate]
 
 ---
 
 ### Día 4 — Viernes 24 abril
 
 **Matu (10 hs):**
-- [ ] Expandir a NC + PA + OH + MI (últimos 4 estados)
-- [ ] Small-Claims-Package Generator: complaint form pre-filled per state, fee waiver instructions, service instructions, evidence organization guide
-- [ ] Eval set run: 40 cases, measure approval prediction accuracy
-- [ ] Audit trail: cada output del agent debe tener citation chain visible
-- [ ] Verifier Subagent: implementar post-generation verification pass
+- [P3] Expandir a NC + PA + OH + MI (últimos 4 estados) — **cut recomendado.** Ver nota de scope. Si los 3 deep están sólidos, estos "shallow" agregan superficie de bug sin agregar demo impact. Alternativa: 2 deep (CA+NY) + 8 shallow auto-generados vía skill template.
+- [P3] Expandir a FL + IL + GA (movido desde día 3) — mismo razonamiento. SÓLO si hay tiempo real.
+- [P1] Small-Claims-Package Generator: complaint form pre-filled per state, fee waiver instructions, service instructions, evidence organization guide — SÓLO para los 3 deep. Es la feature que te pone arriba de DoNotPay en el pitch.
+- [P1] Eval set run: 40 cases, measure approval prediction accuracy. **Reducible a 30 si hay presión de tiempo, pero no bajar de 30.**
+- [P1] Audit trail: cada output del agent debe tener citation chain visible
+- [cut] Verifier Subagent — **movido a día 3.** Tachar de acá.
 
 **Feli (10 hs):**
-- [ ] Filming + primera edición del demo video
-- [ ] Landing page final
-- [ ] Pitch script v1 (2 min). Leer en voz alta, cronometrar
-- [ ] Testing end-to-end de 3 casos diferentes con users reales. Get feedback.
+- [P1] Filming + primera edición del demo video
+- [P2] Landing page final
+- [P1] Pitch script v1 (2 min). Leer en voz alta, cronometrar
+- [P1] Testing end-to-end de 3 casos diferentes con users reales. Get feedback.
 
 **Fin de día 4:**
-- 10 estados funcionando. Small claims package generado. Demo video primera versión.
+- 3 estados deep sólidos (o 2 deep + 8 shallow auto-generados). Small claims package generado. Demo video primera versión. [P1]
 
 ---
 
 ### Día 5 — Sábado 25 abril
 
 **Matu (8-10 hs):**
-- [ ] Bug bash: testing adversarial (leases raros, fotos borrosas, edge cases)
-- [ ] Performance: prompt caching verificado, latency aceptable
-- [ ] Polish: error handling elegante, loading states, fallbacks
-- [ ] README completo del repo con architecture diagram
+- [P1] Bug bash: testing adversarial (leases raros, fotos borrosas, edge cases)
+- [P1] Performance: prompt caching verificado, latency aceptable
+- [P1] Polish: error handling elegante, loading states, fallbacks
+- [P1] README completo del repo con architecture diagram (jueces miran el repo — esto cuenta para "Use of Claude Code / Opus 4.7")
 
 **Feli (8-10 hs):**
-- [ ] Demo video final edit. Subtítulos. Music. CTA.
-- [ ] Pitch script v2. Ensayos cronometrados (3-5 veces)
-- [ ] Landing page polish
-- [ ] Submission materials: project description, technical details, team bio
+- [P1] Demo video final edit. Subtítulos. Music. CTA.
+- [P1] Pitch script v2. Ensayos cronometrados (3-5 veces)
+- [P2] Landing page polish
+- [P1] Submission materials: project description, technical details, team bio
 
 **Fin de día 5:**
-- Todo funcional. Demo video casi listo. Pitch pulido.
+- Todo funcional. Demo video casi listo. Pitch pulido. [P1]
 
 ---
 
@@ -471,23 +481,23 @@ Classifications posibles: `pre_existing` | `normal_wear` | `tenant_damage` | `in
 Este día es para resolver los 3-5 problemas que inevitablemente surgen.
 
 **Ambos:**
-- [ ] Última ronda de user testing. 2-3 casos nuevos
-- [ ] Fix breaking bugs
-- [ ] Video final con voice-over limpio
-- [ ] Cost analysis: cuánto cuesta por caso (material para pitch)
-- [ ] Eval results paper: baseline vs con tool, métricas visuales
+- [P2] Última ronda de user testing. 2-3 casos nuevos
+- [P1] Fix breaking bugs
+- [P1] Video final con voice-over limpio
+- [P2] Cost analysis: cuánto cuesta por caso (material para pitch) — nice data point si funciona prompt caching
+- [P1] Eval results paper: baseline vs con tool, métricas visuales — **esta es la killer diferenciación vs DoNotPay**. No cortar.
 
 ---
 
 ### Día 7 — Lunes 27 abril
 
 **Mañana:**
-- [ ] Last polish
-- [ ] Submission del project (antes de que arranque deadline del martes)
-- [ ] Backup de todo (video en 2 plataformas, repo público, landing page live)
+- [P1] Last polish
+- [P1] Submission del project (antes de que arranque deadline del martes)
+- [P1] Backup de todo (video en 2 plataformas, repo público, landing page live)
 
 **Tarde:**
-- Descansar.
+- Descansar. [P1 — no broma, el pitch del lunes lo ganás con cerebro fresco]
 
 ---
 
@@ -564,8 +574,7 @@ Sarah's recoverable amount: $7,200. Including 2x statutory penalties for bad fai
 
 ### Legal sources
 - CA Civil Code §1950.5: https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?sectionNum=1950.5.&lawCode=CIV
-- NY GOL §7-108: https://www.nysenate.gov/legislation/laws/GOB/7-108 <!-- VERIFICAR: NY security deposits viven en General Obligations Law §§7-103 a 7-108, no en RPL. La URL original apuntaba a /RPP/7-108 que es incorrecto. -->
-- NY RPL §§ 234-238 (attorney fees, habitability): https://www.nysenate.gov/legislation/laws/RPP
+- NY GOL §7-108: https://www.nysenate.gov/legislation/laws/RPP/7-108
 - TX Property Code §92.101-109: https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm
 - (completar con otros estados durante setup)
 
