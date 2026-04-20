@@ -7,16 +7,11 @@ import {
 } from "./claude";
 import {
   EXPERT_SPECS, orchestratorSystem, judgeSystem, synthesizerSystem,
+  ARTIFACT_HINT,
 } from "./experts";
 import { decisionsBlock, appendDecision } from "./decisions";
 import { sessionDir } from "./sandbox";
-import type { ExpertId } from "./data";
-
-const ARTIFACT_HINT = `
-
-ARCHIVOS (OPCIONAL)
--------------------
-Tenés acceso a Write/Read/Glob/Grep dentro del directorio de esta sesión. Si tu respuesta produce un artefacto concreto (ej. borrador de demand letter, outline de un skill, plantilla) creá el archivo con Write y mencionalo al final de tu respuesta con \`→ archivo: <nombre>\`. Sólo archivos cortos, markdown o texto. No uses paths absolutos, no crees subdirectorios.`.trim();
+import type { ExpertId, UserId } from "./data";
 
 function expertSystem(expertId: ExpertId, withWrite: boolean): string {
   const base = EXPERT_SPECS[expertId].system;
@@ -48,7 +43,7 @@ export type DebateRow = {
   id: string;
   created_ts: string;
   updated_ts: string;
-  author: "matu" | "feli";
+  author: UserId;
   prompt: string;
   status: "live" | "closed" | "error";
   round: number;
@@ -59,25 +54,29 @@ export type DebateRow = {
 };
 
 /** Orquestador: elige 2-4 expertos (sin devil). */
-export async function pickExperts(prompt: string) {
+export async function pickExperts(
+  prompt: string
+): Promise<{ selected: ExpertId[]; reasoning: string }> {
   const raw = await complete({
     system: orchestratorSystem(),
     user: `PREGUNTA:\n${prompt}`,
     model: MODEL_SONNET,
   });
-  const parsed = parseJsonReply<{ selected: ExpertId[]; reasoning: string }>(raw);
-  const filtered = parsed.selected.filter(
-    (e): e is ExpertId => e in EXPERT_SPECS && e !== "devil"
+  const parsed = parseJsonReply<{ selected: unknown; reasoning?: unknown }>(raw);
+  const rawSelected = Array.isArray(parsed.selected) ? parsed.selected : [];
+  const filtered = rawSelected.filter(
+    (e): e is ExpertId => typeof e === "string" && e in EXPERT_SPECS && e !== "devil"
   );
   const clamped = filtered.slice(0, 4);
+  const reasoning = typeof parsed.reasoning === "string" ? parsed.reasoning : "";
   if (clamped.length === 0) {
     // Fallback: sensible default
     return {
-      selected: ["arq", "product"] as ExpertId[],
+      selected: ["arq", "product"],
       reasoning: "fallback (orchestrator returned empty)",
     };
   }
-  return { selected: clamped, reasoning: parsed.reasoning };
+  return { selected: clamped, reasoning };
 }
 
 /** Arma el user-content para un experto en una ronda dada. */
@@ -177,6 +176,18 @@ export async function runRound(
   return { n: roundN, turns };
 }
 
+/** Plain-text render of all rounds, used as Judge/Synthesizer user input. */
+function renderRounds(rounds: Round[]): string {
+  return rounds
+    .map((r) => {
+      const turns = r.turns
+        .map((t) => `— ${EXPERT_SPECS[t.expert].role}: ${t.content}`)
+        .join("\n");
+      return `\n[Ronda ${r.n}]\n${turns}`;
+    })
+    .join("\n");
+}
+
 export async function runJudge(
   debate: Pick<DebateRow, "prompt" | "max_rounds" | "data">,
   roundN: number
@@ -185,12 +196,7 @@ export async function runJudge(
     `PREGUNTA:\n${debate.prompt}`,
     `\nMÁXIMO DE RONDAS: ${debate.max_rounds} (estás en ronda ${roundN}).`,
     "\nRONDAS HASTA AHORA:",
-    ...debate.data.rounds.map((r) => {
-      const turns = r.turns
-        .map((t) => `— ${EXPERT_SPECS[t.expert].role}: ${t.content}`)
-        .join("\n");
-      return `\n[Ronda ${r.n}]\n${turns}`;
-    }),
+    renderRounds(debate.data.rounds),
   ].join("\n");
 
   try {
@@ -204,10 +210,11 @@ export async function runJudge(
     const decision: Judgement["decision"] =
       roundN >= debate.max_rounds ? "close" : parsed.decision;
     return { round: roundN, verdict: parsed.verdict, decision, focus_next: parsed.focus_next ?? null };
-  } catch {
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : "unknown";
     return {
       round: roundN,
-      verdict: "Juez no pudo parsear — cerrando.",
+      verdict: `Juez falló (${reason}) — cerrando.`,
       decision: "close",
       focus_next: null,
     };
@@ -220,12 +227,7 @@ export async function runSynthesis(
   const body = [
     `PREGUNTA:\n${debate.prompt}`,
     "\nDEBATE COMPLETO:",
-    ...debate.data.rounds.map((r) => {
-      const turns = r.turns
-        .map((t) => `— ${EXPERT_SPECS[t.expert].role}: ${t.content}`)
-        .join("\n");
-      return `\n[Ronda ${r.n}]\n${turns}`;
-    }),
+    renderRounds(debate.data.rounds),
   ].join("\n");
 
   try {
@@ -248,9 +250,10 @@ export async function runSynthesis(
       // non-fatal; memory write should never break the flow
     }
     return parsed;
-  } catch {
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : "unknown";
     return {
-      headline: "Sin síntesis: el sintetizador falló",
+      headline: `Sin síntesis: el sintetizador falló (${reason})`,
       points: [],
       dissent: "",
     };
@@ -289,5 +292,17 @@ export async function fetchDebate(id: string): Promise<DebateRow | null> {
     `SELECT * FROM agent_debates WHERE id = $1`,
     [id]
   );
-  return (rows[0] as DebateRow) ?? null;
+  const row = rows[0] as DebateRow | undefined;
+  if (!row) return null;
+  // Defensive: ensure data shape is usable downstream even if an older row
+  // was inserted before the full DebateData contract existed.
+  row.data = {
+    experts: row.data?.experts ?? [],
+    orchestrator_reasoning: row.data?.orchestrator_reasoning,
+    rounds: row.data?.rounds ?? [],
+    judgements: row.data?.judgements ?? [],
+    synthesis: row.data?.synthesis ?? null,
+    error: row.data?.error ?? null,
+  };
+  return row;
 }

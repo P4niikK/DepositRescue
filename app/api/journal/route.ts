@@ -4,9 +4,17 @@ import { whoFromRequest } from "@/lib/cockpit/who";
 
 export const dynamic = "force-dynamic";
 
+const KINDS = new Set(["started", "finished", "blocked", "note", "decision"]);
+
+function parseLimit(raw: string | null, def: number, max: number): number {
+  const n = parseInt(raw || "", 10);
+  if (!Number.isFinite(n) || n <= 0) return def;
+  return Math.min(n, max);
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 200);
+  const limit = parseLimit(searchParams.get("limit"), 50, 200);
   const author = searchParams.get("author");
 
   try {
@@ -33,12 +41,24 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    const kind = body.kind ?? "note";
-    const task = body.task?.trim();
-    const notes = body.notes?.trim() || null;
-    const files: string[] = Array.isArray(body.files) ? body.files : [];
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
+  }
+  try {
+    const kindRaw = typeof body.kind === "string" ? body.kind : "note";
+    if (!KINDS.has(kindRaw)) {
+      return NextResponse.json({ error: "invalid kind" }, { status: 400 });
+    }
+    const kind = kindRaw;
+    const task = typeof body.task === "string" ? body.task.trim() : "";
+    const notesRaw = typeof body.notes === "string" ? body.notes.trim() : "";
+    const notes = notesRaw || null;
+    const files: string[] = Array.isArray(body.files)
+      ? body.files.filter((f): f is string => typeof f === "string")
+      : [];
     if (!task) {
       return NextResponse.json({ error: "task required" }, { status: 400 });
     }

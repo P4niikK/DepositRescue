@@ -30,8 +30,10 @@ export function Avatar({
         background: s.bg,
         color: s.fg,
       }}
+      role="img"
+      aria-label={u.name}
     >
-      {u.initials}
+      <span aria-hidden="true">{u.initials}</span>
     </span>
   );
 }

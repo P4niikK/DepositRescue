@@ -64,34 +64,49 @@ export function ArtifactsPanel({
       <div className="mb-2 flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-[var(--text-3)]">
         <span>ARTIFACTS ({files.length})</span>
         <button
+          type="button"
           onClick={load}
-          className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--text-1)]"
+          aria-label="Refrescar artifacts"
           title="Refrescar"
+          className="flex h-5 w-5 cursor-pointer items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--text-1)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--amber)]"
         >
-          <RefreshCw size={10} />
+          <RefreshCw size={10} aria-hidden="true" />
         </button>
       </div>
       <ul className="flex flex-col gap-1">
         {files.map((f) => {
           const open = openName === f.name;
+          const panelId = `artifact-${kind}-${id}-${f.name}`;
           return (
             <li key={f.name} className="rounded border border-[var(--border-1)] bg-[var(--bg-2)]">
               <button
+                type="button"
                 onClick={() => openFile(f.name)}
+                aria-expanded={open}
+                aria-controls={panelId}
                 className={cn(
-                  "flex w-full items-center gap-2 px-2 py-1.5 text-left font-mono text-[11px] transition",
+                  "flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-left font-mono text-[11px] transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--amber)]",
                   open ? "text-[var(--text-0)]" : "text-[var(--text-1)] hover:text-[var(--text-0)]"
                 )}
               >
-                {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                <FileText size={12} className="text-[var(--amber-dim)]" />
+                {open ? (
+                  <ChevronDown size={12} aria-hidden="true" />
+                ) : (
+                  <ChevronRight size={12} aria-hidden="true" />
+                )}
+                <FileText size={12} className="text-[var(--amber-dim)]" aria-hidden="true" />
                 <span className="flex-1 truncate">{f.name}</span>
                 <span className="text-[10px] text-[var(--text-3)]">
                   {formatSize(f.size)}
                 </span>
               </button>
               {open && (
-                <div className="border-t border-[var(--border-1)] bg-[var(--bg-0)] p-2">
+                <div
+                  id={panelId}
+                  role="region"
+                  aria-label={`Contenido de ${f.name}`}
+                  className="border-t border-[var(--border-1)] bg-[var(--bg-0)] p-2"
+                >
                   {loadingFile ? (
                     <div className="font-mono text-[10px] text-[var(--text-3)]">cargando…</div>
                   ) : (

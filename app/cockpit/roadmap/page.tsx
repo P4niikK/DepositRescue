@@ -48,14 +48,14 @@ export default function RoadmapPage() {
         <p className="font-mono text-[11px] text-[var(--text-3)]">
           parseado de <span className="text-[var(--amber-dim)]">{parsed.file}</span>
           {" · "}
-          last modified {formatMtime(parsed.mtime)}
+          last modified · {formatMtime(parsed.mtime)}
         </p>
       </header>
 
       {days.length === 0 && (
         <div className="rounded-md border border-dashed border-[var(--border-2)] bg-[var(--bg-1)] px-4 py-6 text-center font-mono text-[11px] text-[var(--text-3)]">
-          No encontré <code>docs/ROADMAP.md</code> o no tiene headers
-          <code> ### Día N — …</code>.
+          sin roadmap · creá <code>docs/ROADMAP.md</code> con headers{" "}
+          <code>### Día N — …</code>
         </div>
       )}
 
@@ -66,14 +66,14 @@ export default function RoadmapPage() {
               DepositRescue · 7-day hackathon
             </div>
             <div className="mt-0.5 font-mono text-[10px] text-[var(--text-3)]">
-              auto-sync: al recargar la página se re-parsea el .md
+              auto-sync · recargá para re-parsear el .md
             </div>
           </div>
           <div className="flex items-center gap-4 font-mono text-[11px]">
-            <Stat label="progreso" value={`${totalDone}/${total}`} />
-            <Stat label="día" value={dayLabel} />
+            <Stat label="progress" value={`${totalDone}/${total}`} />
+            <Stat label="day" value={dayLabel} />
             <Stat
-              label="atrasados"
+              label="late"
               value={String(lateCount)}
               warn={lateCount > 0}
             />
@@ -171,7 +171,7 @@ export default function RoadmapPage() {
                     ))}
                     {d.tasks.length > 8 && (
                       <span className="font-mono text-[10px] text-[var(--text-3)]">
-                        +{d.tasks.length - 8} más
+                        +{d.tasks.length - 8} more
                       </span>
                     )}
                   </div>

@@ -25,8 +25,10 @@ export function TypeIcon({ type }: { type: ActivityKind }) {
         background: `color-mix(in oklch, ${meta.colorVar} 18%, transparent)`,
         color: meta.colorVar,
       }}
+      role="img"
+      aria-label={meta.label}
     >
-      {ICONS[type]}
+      <span aria-hidden="true">{ICONS[type]}</span>
     </span>
   );
 }

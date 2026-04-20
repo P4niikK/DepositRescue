@@ -60,7 +60,10 @@ export function Rail() {
   }, [fetchAs]);
 
   return (
-    <aside className="sticky top-12 hidden h-[calc(100vh-3rem)] w-72 shrink-0 flex-col gap-3 overflow-y-auto border-l border-[var(--border-1)] bg-[var(--bg-0)] p-3 xl:flex">
+    <aside
+      aria-label="Estado del hackathon y presencia"
+      className="sticky top-12 hidden h-[calc(100vh-3rem)] w-72 shrink-0 flex-col gap-3 overflow-y-auto border-l border-[var(--border-1)] bg-[var(--bg-0)] p-3 xl:flex"
+    >
       <Block title="PRESENCIA" right={<LiveIndicator />}>
         <PresenceCard who="matu" entry={presence.matu} />
         <PresenceCard who="feli" entry={presence.feli} />
@@ -133,10 +136,18 @@ function HackathonBlock({ status }: { status: HackathonStatus }) {
           <span className="font-semibold text-[var(--text-0)]">{status.dayBadge}</span>
           <span className="text-[var(--text-2)] truncate ml-2">{title}</span>
         </div>
-        <div className="flex gap-0.5">
+        <div
+          className="flex gap-0.5"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={done}
+          aria-label={`Progreso del día: ${done} de ${total} tareas`}
+        >
           {Array.from({ length: total }).map((_, i) => (
             <span
               key={i}
+              aria-hidden="true"
               className="h-1 flex-1 rounded-full"
               style={{
                 background:
@@ -197,8 +208,13 @@ function Block({
 
 function LiveIndicator() {
   return (
-    <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest text-[var(--amber)]">
+    <span
+      role="status"
+      aria-label="Presencia en vivo"
+      className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest text-[var(--amber)]"
+    >
       <span
+        aria-hidden="true"
         className="inline-block h-1.5 w-1.5 rounded-full"
         style={{ background: "var(--amber)" }}
       />

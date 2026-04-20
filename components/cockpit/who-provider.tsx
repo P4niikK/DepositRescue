@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { UserId } from "@/lib/cockpit/data";
 import { WHO_COOKIE, WHO_HEADER, WHO_STORAGE_KEY, isWho } from "@/lib/cockpit/who";
 import { Avatar } from "./avatar";
@@ -79,34 +79,92 @@ export function useWho() {
 }
 
 function IdentityPicker({ onPick }: { onPick: (w: UserId) => void }) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const firstBtnRef = useRef<HTMLButtonElement | null>(null);
+  const lastBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // Focus the first choice on open, and keep focus inside the dialog.
+  // No Escape handler: this is a blocking choice (no cancel path).
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    firstBtnRef.current?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const first = firstBtnRef.current;
+      const last = lastBtnRef.current;
+      if (!first || !last) return;
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+      previouslyFocused?.focus?.();
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
-      <div className="w-full max-w-sm rounded-lg border border-[var(--border-2)] bg-[var(--bg-1)] p-6 shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur"
+      role="presentation"
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="who-title"
+        aria-describedby="who-desc"
+        className="w-full max-w-sm rounded-lg border border-[var(--border-2)] bg-[var(--bg-1)] p-6 shadow-2xl"
+      >
         <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--amber)]">
           DepositRescue · Cockpit
         </div>
-        <h2 className="mt-2 text-[18px] font-semibold text-[var(--text-0)]">
+        <h2 id="who-title" className="mt-2 text-[18px] font-semibold text-[var(--text-0)]">
           ¿Quién sos?
         </h2>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--text-2)]">
+        <p id="who-desc" className="mt-1 text-[12.5px] leading-relaxed text-[var(--text-2)]">
           Todo lo que postees en esta sesión se va a atribuir a vos. Podés cambiarlo después desde la topbar.
         </p>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <IdentityButton who="matu" onPick={onPick} />
-          <IdentityButton who="feli" onPick={onPick} />
+          <IdentityButton who="matu" onPick={onPick} ref={firstBtnRef} />
+          <IdentityButton who="feli" onPick={onPick} ref={lastBtnRef} />
         </div>
       </div>
     </div>
   );
 }
 
-function IdentityButton({ who, onPick }: { who: UserId; onPick: (w: UserId) => void }) {
+function IdentityButton({
+  who,
+  onPick,
+  ref,
+}: {
+  who: UserId;
+  onPick: (w: UserId) => void;
+  ref?: React.Ref<HTMLButtonElement>;
+}) {
   const name = who === "matu" ? "Matu" : "Feli";
   const role = who === "matu" ? "tech lead" : "product lead";
   return (
     <button
+      ref={ref}
+      type="button"
       onClick={() => onPick(who)}
-      className="flex flex-col items-center gap-2 rounded-md border border-[var(--border-2)] bg-[var(--bg-2)] px-4 py-5 transition hover:border-[var(--amber-border)] hover:bg-[var(--amber-soft)]/30"
+      aria-label={`Entrar como ${name} (${role})`}
+      className="flex cursor-pointer flex-col items-center gap-2 rounded-md border border-[var(--border-2)] bg-[var(--bg-2)] px-4 py-5 transition hover:border-[var(--amber-border)] hover:bg-[var(--amber-soft)]/30 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--amber)]"
     >
       <Avatar who={who} size={40} />
       <span className="text-[14px] font-semibold text-[var(--text-0)]">{name}</span>

@@ -66,7 +66,7 @@ export default function DebatePage() {
       setDebates(list);
       if (!openId && list.length > 0) setOpenId(list[0].id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "load failed");
+      setError(e instanceof Error ? e.message : "no pude cargar los debates");
     }
   }, [openId, fetchAs]);
 
@@ -96,7 +96,7 @@ export default function DebatePage() {
       setShowLauncher(false);
       await loadList();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "launch failed");
+      setError(e instanceof Error ? e.message : "no pude lanzar el debate");
     } finally {
       setSubmitting(false);
     }
@@ -115,7 +115,7 @@ export default function DebatePage() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         await loadList();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "round failed");
+        setError(e instanceof Error ? e.message : "la ronda falló");
       } finally {
         setRoundRunning(false);
         inFlightRef.current = false;
@@ -134,7 +134,7 @@ export default function DebatePage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await loadList();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "close failed");
+      setError(e instanceof Error ? e.message : "no pude forzar la síntesis");
     } finally {
       setClosingAsk(false);
       inFlightRef.current = false;
@@ -158,7 +158,7 @@ export default function DebatePage() {
           <h1 className="text-[22px] font-semibold text-[var(--text-0)]">Debates</h1>
           <p className="font-mono text-[11px] text-[var(--text-3)]">
             {debates.filter((d) => d.status === "live").length} live ·{" "}
-            {debates.filter((d) => d.status === "closed").length} cerrados
+            {debates.filter((d) => d.status === "closed").length} closed
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -172,7 +172,7 @@ export default function DebatePage() {
             onClick={() => setShowLauncher((s) => !s)}
             className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)] px-3 font-mono text-[11px] uppercase tracking-wider text-[var(--amber)] transition hover:bg-[var(--amber)]/20"
           >
-            <Plus size={12} /> Nuevo debate
+            <Plus size={12} /> New debate
           </button>
         </div>
       </header>
@@ -189,7 +189,7 @@ export default function DebatePage() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             rows={3}
-            placeholder="Planteá la pregunta o decisión que querés que debatan (ej: ¿Server Actions o API routes para los writes del feed?)"
+            placeholder="¿Qué decisión querés que debatan? · ej: Server Actions vs API routes para writes del feed"
             className="w-full resize-none bg-transparent text-[13.5px] text-[var(--text-0)] placeholder:text-[var(--text-3)] focus:outline-none"
             disabled={submitting}
           />
@@ -202,10 +202,10 @@ export default function DebatePage() {
                 className="h-3.5 w-3.5 accent-[var(--amber)]"
                 disabled={submitting}
               />
-              Incluir abogado del diablo
+              Incluir devil's advocate
             </label>
             <label className="flex items-center gap-2">
-              Rondas máx
+              Max rounds
               <select
                 value={maxRounds}
                 onChange={(e) => setMaxRounds(Number(e.target.value))}
@@ -222,7 +222,7 @@ export default function DebatePage() {
               disabled={!prompt.trim() || submitting}
               className="ml-auto flex items-center gap-2 rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)] px-4 py-1.5 font-mono text-[11px] text-[var(--amber)] transition hover:bg-[var(--amber)]/20 disabled:opacity-40"
             >
-              {submitting ? "debatiendo (puede tardar ~60s)…" : <><Sparkles size={12} /> Lanzar debate</>}
+              {submitting ? "armando debate · ~60s…" : <><Sparkles size={12} /> Launch debate</>}
             </button>
           </div>
         </section>
@@ -230,7 +230,7 @@ export default function DebatePage() {
 
       {debates.length === 0 ? (
         <div className="py-12 text-center font-mono text-[11px] text-[var(--text-3)]">
-          sin debates · lanzá el primero
+          sin debates · tocá “New debate” arriba
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
@@ -310,7 +310,7 @@ function DebateDetail({
           {debate.data.orchestrator_reasoning && (
             <div className="mt-3 rounded border border-[var(--border-1)] bg-[var(--bg-2)] px-3 py-2 text-[12px] leading-relaxed text-[var(--text-2)]">
               <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--amber-dim)]">
-                Orquestador
+                Orchestrator
               </span>{" "}
               · {debate.data.orchestrator_reasoning}
             </div>
@@ -338,16 +338,16 @@ function DebateDetail({
                 ? "sintetizando…"
                 : roundRunning
                 ? `corriendo ronda ${debate.round + 1}/${debate.max_rounds}…`
-                : `esperando próxima ronda (R${debate.round + 1}/${debate.max_rounds})`}
+                : `próxima ronda en camino · R${debate.round + 1}/${debate.max_rounds}`}
             </div>
             <button
               onClick={onClose}
               disabled={roundRunning || closing}
               className="flex items-center gap-2 rounded-md border border-[var(--border-2)] bg-[var(--bg-1)] px-3 py-1.5 font-mono text-[11px] text-[var(--text-2)] transition hover:border-[var(--border-3)] hover:text-[var(--text-1)] disabled:opacity-40"
-              title="Corta el auto-encadenado y fuerza síntesis con lo que hay"
+              title="Cierra el auto-encadenado y fuerza síntesis con lo que hay"
             >
               <Gavel size={11} />
-              Forzar síntesis
+              Force synthesis
             </button>
           </div>
         )}
@@ -356,7 +356,7 @@ function DebateDetail({
           <div className="rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)]/40 p-4">
             <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-[var(--amber)]">
               <Sparkles size={11} />
-              SÍNTESIS · cerrada en ronda {debate.round}
+              SÍNTESIS · closed en ronda {debate.round}
             </div>
             <h3 className="mt-2 text-[15px] font-semibold text-[var(--text-0)]">
               {debate.data.synthesis.headline}
@@ -384,7 +384,7 @@ function DebateDetail({
       </div>
 
       <div className="flex flex-col gap-3">
-        <Side title={`EXPERTOS (${debate.data.experts.length})`}>
+        <Side title={`EXPERTS (${debate.data.experts.length})`}>
           {debate.data.experts.map((eid) => {
             const ex = EXPERTS[eid];
             return (
@@ -405,7 +405,7 @@ function DebateDetail({
         </Side>
 
         <Side title="CONTROL">
-          <SideButton icon={<Pin size={11} />}>Pin a commit</SideButton>
+          <SideButton icon={<Pin size={11} />}>Pin to commit</SideButton>
         </Side>
 
         <ArtifactsPanel kind="debate" id={debate.id} pollKey={debate.updated_ts} />
@@ -417,7 +417,7 @@ function DebateDetail({
 function RoundLabel({ n }: { n: number }) {
   return (
     <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest">
-      <span className="text-[var(--text-2)]">RONDA {n}</span>
+      <span className="text-[var(--text-2)]">ROUND {n}</span>
       <div className="h-px flex-1 bg-[var(--border-1)]" />
     </div>
   );
@@ -454,7 +454,7 @@ function Turn({ turn }: { turn: Turn }) {
                 background: "color-mix(in oklch, var(--c-blocked) 10%, transparent)",
               }}
             >
-              abogado del diablo
+              devil's advocate
             </span>
           )}
           {turn.ms !== undefined && (
@@ -483,13 +483,13 @@ function JudgeBar({ j }: { j: Judgement }) {
         className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest"
         style={{ color: "var(--c-decided)" }}
       >
-        <Gavel size={11} /> JUEZ · veredicto ronda {j.round}
+        <Gavel size={11} /> JUDGE · veredicto ronda {j.round}
       </div>
       <p className="mt-1 text-[12.5px] text-[var(--text-1)]">{j.verdict}</p>
       <div className="mt-1.5 font-mono text-[11px] text-[var(--text-2)]">
         → decisión:{" "}
         <b style={{ color: "var(--text-0)" }}>
-          {j.decision === "close" ? "cerrar con síntesis" : `continuar a ronda ${j.round + 1}`}
+          {j.decision === "close" ? "cerrar con síntesis" : `seguir a ronda ${j.round + 1}`}
         </b>
         {j.focus_next && (
           <span className="mt-1 block text-[var(--text-3)]">foco: {j.focus_next}</span>

@@ -4,13 +4,29 @@ import { whoFromRequest } from "@/lib/cockpit/who";
 
 export const dynamic = "force-dynamic";
 
+function parseId(raw: string): number | null {
+  if (!/^\d+$/.test(raw)) return null;
+  const n = Number(raw);
+  if (!Number.isSafeInteger(n) || n <= 0) return null;
+  return n;
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: idRaw } = await params;
+  const id = parseId(idRaw);
+  if (id === null) {
+    return NextResponse.json({ error: "invalid id" }, { status: 400 });
+  }
+  let body: Record<string, unknown>;
   try {
-    const { id } = await params;
-    const body = await req.json();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
+  }
+  try {
     const sets: string[] = [];
     const values: unknown[] = [];
 
@@ -27,11 +43,19 @@ export async function PATCH(
       }
     }
     if (typeof body.title === "string") {
-      values.push(body.title.trim());
+      const trimmed = body.title.trim();
+      if (!trimmed) {
+        return NextResponse.json({ error: "title cannot be empty" }, { status: 400 });
+      }
+      if (trimmed.length > 500) {
+        return NextResponse.json({ error: "title too long" }, { status: 400 });
+      }
+      values.push(trimmed);
       sets.push(`title = $${values.length}`);
     }
     if (Array.isArray(body.tags)) {
-      values.push(body.tags);
+      const tags = body.tags.filter((t): t is string => typeof t === "string");
+      values.push(tags);
       sets.push(`tags = $${values.length}`);
     }
     if (body.assignee === null || body.assignee === "matu" || body.assignee === "feli") {
@@ -62,9 +86,16 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: idRaw } = await params;
+  const id = parseId(idRaw);
+  if (id === null) {
+    return NextResponse.json({ error: "invalid id" }, { status: 400 });
+  }
   try {
-    const { id } = await params;
-    await pool.query(`DELETE FROM agent_checklist WHERE id = $1`, [id]);
+    const res = await pool.query(`DELETE FROM agent_checklist WHERE id = $1`, [id]);
+    if (res.rowCount === 0) {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(

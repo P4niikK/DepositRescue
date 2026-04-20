@@ -52,7 +52,7 @@ export default function FeedPage() {
       );
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "failed to load");
+      setError(e instanceof Error ? e.message : "no pude cargar el feed");
     } finally {
       setLoading(false);
     }
@@ -94,7 +94,7 @@ export default function FeedPage() {
       setComposerText("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "post failed");
+      setError(e instanceof Error ? e.message : "no se pudo postear");
     } finally {
       setPosting(false);
     }
@@ -106,13 +106,13 @@ export default function FeedPage() {
         <div>
           <h1 className="text-[22px] font-semibold text-[var(--text-0)]">Activity</h1>
           <p className="font-mono text-[11px] text-[var(--text-3)]">
-            {visible.length} events · {loading ? "loading…" : "live"} · auto-sync {POLL_MS / 1000}s
+            {visible.length} events · {loading ? "cargando…" : "live"} · auto-sync {POLL_MS / 1000}s
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={load}
-            title="Refrescar"
+            title="Recargar feed"
             className="flex h-8 items-center justify-center rounded-md border border-[var(--border-1)] bg-[var(--bg-1)] px-2 text-[var(--text-2)] transition hover:border-[var(--border-2)] hover:text-[var(--text-1)]"
           >
             <RefreshCw size={12} />
@@ -228,7 +228,7 @@ export default function FeedPage() {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") post();
           }}
           rows={2}
-          placeholder="Qué estás haciendo? Cmd+Enter para postear."
+          placeholder="¿Qué estás haciendo? · Cmd+Enter para postear"
           className="w-full resize-none bg-transparent text-[12.5px] text-[var(--text-0)] placeholder:text-[var(--text-3)] focus:outline-none"
         />
         <div className="flex items-center justify-between pt-2">
@@ -255,7 +255,7 @@ export default function FeedPage() {
             disabled={!composerText.trim() || posting}
             className="flex items-center gap-2 rounded-md border border-[var(--amber-border)] bg-[var(--amber-soft)] px-3 py-1 font-mono text-[11px] text-[var(--amber)] transition hover:bg-[var(--amber)]/20 disabled:opacity-40"
           >
-            {posting ? "posting…" : <>post <kbd>⌘↵</kbd></>}
+            {posting ? "posteando…" : <>post <kbd>⌘↵</kbd></>}
           </button>
         </div>
       </div>

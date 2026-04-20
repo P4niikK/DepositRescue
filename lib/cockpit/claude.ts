@@ -26,7 +26,7 @@ const SANDBOX_DISALLOWED = [
 
 type ClaudeResult = {
   type: "result";
-  subtype: "success" | string;
+  subtype: string;
   is_error: boolean;
   result: string;
   duration_ms: number;
@@ -34,8 +34,11 @@ type ClaudeResult = {
 };
 
 export class ClaudeCliError extends Error {
-  constructor(message: string, public stderr?: string) {
+  readonly stderr?: string;
+  constructor(message: string, stderr?: string) {
     super(message);
+    this.name = "ClaudeCliError";
+    this.stderr = stderr;
   }
 }
 
@@ -60,7 +63,7 @@ export async function complete(opts: {
   const args = [
     "-p",
     "--system-prompt", opts.system,
-    "--model", opts.model ?? "opus",
+    "--model", opts.model ?? MODEL_OPUS,
     "--output-format", "json",
     "--no-session-persistence",
     "--disallowed-tools", disallowed.join(","),

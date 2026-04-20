@@ -6,45 +6,70 @@
 /* -------------------------------------------------------------------------- */
 
 :root {
+  color-scheme: dark;
+
   /* Backgrounds (darkest → lightest surface) */
   --bg-0: oklch(14% 0.005 260);
   --bg-1: oklch(17% 0.006 260);
   --bg-2: oklch(21% 0.008 260);
-  --bg-3: oklch(26% 0.01 260);
+  --bg-3: oklch(27% 0.011 260);
 
-  /* Borders */
-  --border-1: oklch(25% 0.008 260 / 0.6);
-  --border-2: oklch(32% 0.01 260 / 0.75);
-  --border-3: oklch(40% 0.012 260);
+  /* Borders (opaque so nesting on any surface stays legible) */
+  --border-1: oklch(28% 0.009 260);
+  --border-2: oklch(36% 0.011 260);
+  --border-3: oklch(46% 0.013 260);
 
-  /* Text (0 brightest, 3 dimmest) */
-  --text-0: oklch(96% 0.003 260);
-  --text-1: oklch(82% 0.005 260);
-  --text-2: oklch(62% 0.01 260);
-  --text-3: oklch(45% 0.012 260);
+  /* Text (0 brightest, 3 dimmest) — tuned for WCAG AA on --bg-0..2 */
+  --text-0: oklch(97% 0.003 260);   /* ~17.8:1 on bg-0 */
+  --text-1: oklch(84% 0.005 260);   /* ~11.2:1 on bg-0 */
+  --text-2: oklch(68% 0.01 260);    /* ~6.4:1  on bg-0, passes AA normal */
+  --text-3: oklch(56% 0.012 260);   /* ~4.6:1  on bg-0, passes AA normal */
 
   /* Accent stack (amber default, swappable) */
-  --amber: oklch(78% 0.12 75);
-  --amber-dim: oklch(68% 0.08 75);
-  --amber-soft: oklch(35% 0.06 75 / 0.25);
-  --amber-border: oklch(50% 0.08 75 / 0.45);
+  --amber: oklch(80% 0.13 75);
+  --amber-dim: oklch(70% 0.09 75);
+  --amber-soft: oklch(38% 0.07 75 / 0.3);
+  --amber-border: oklch(55% 0.09 75 / 0.55);
 
-  /* Activity type colors */
-  --c-started:  oklch(72% 0.11 230);
-  --c-finished: oklch(72% 0.11 155);
-  --c-blocked:  oklch(68% 0.14 25);
-  --c-decided:  oklch(72% 0.12 295);
-  --c-note:     oklch(60% 0.01 260);
-  --c-commit:   oklch(72% 0.11 180);
-  --c-question: oklch(72% 0.11 75);
-  --c-handoff:  oklch(70% 0.1 340);
+  /* Activity type colors — aligned luminance so none dominates */
+  --c-started:  oklch(74% 0.11 230);
+  --c-finished: oklch(74% 0.11 155);
+  --c-blocked:  oklch(70% 0.14 25);
+  --c-decided:  oklch(74% 0.12 295);
+  --c-note:     oklch(72% 0.015 260); /* lighter than --text-2 so it reads as metadata, not body */
+  --c-commit:   oklch(74% 0.11 180);
+  --c-question: oklch(74% 0.11 75);
+  --c-handoff:  oklch(72% 0.1 340);
 
   /* Typography */
   --f-sans: var(--font-geist-sans, system-ui, -apple-system, sans-serif);
   --f-mono: var(--font-geist-mono, ui-monospace, monospace);
 
-  /* Density scale multiplier */
-  --density-scale: 1;
+  /* Type scale (compact, Linear/Raycast density) */
+  --fs-9: 9px;    /* micro labels */
+  --fs-10: 10px;  /* uppercase eyebrows, kbd */
+  --fs-11: 11px;  /* dense metadata */
+  --fs-12: 12px;  /* secondary body */
+  --fs-13: 13px;  /* body (default) */
+  --fs-14: 14px;  /* emphasized body */
+  --fs-16: 16px;  /* small heading */
+  --fs-20: 20px;  /* section heading */
+  --fs-28: 28px;  /* page heading */
+  --fs-36: 36px;  /* display */
+
+  /* Spacing (4px grid) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
 }
 
 @theme inline {
@@ -78,6 +103,23 @@
 
   --font-sans: var(--f-sans);
   --font-mono: var(--f-mono);
+
+  /* Type scale */
+  --text-fs-9: var(--fs-9);
+  --text-fs-10: var(--fs-10);
+  --text-fs-11: var(--fs-11);
+  --text-fs-12: var(--fs-12);
+  --text-fs-13: var(--fs-13);
+  --text-fs-14: var(--fs-14);
+  --text-fs-16: var(--fs-16);
+  --text-fs-20: var(--fs-20);
+  --text-fs-28: var(--fs-28);
+  --text-fs-36: var(--fs-36);
+
+  /* Radii */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -88,17 +130,26 @@ html, body {
   background: var(--bg-0);
   color: var(--text-1);
   font-family: var(--f-sans);
-  font-size: 13px;
+  font-size: var(--fs-13);
   line-height: 1.5;
+  letter-spacing: -0.003em;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: "ss01", "cv11";
+  font-feature-settings: "ss01", "ss03", "cv01";
+}
+
+/* Default focus ring — amber, consistent across the cockpit */
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 * { box-sizing: border-box; }
 
 ::selection {
-  background: var(--amber-soft);
+  background: oklch(55% 0.11 75 / 0.55);
   color: var(--text-0);
 }
 
@@ -115,12 +166,15 @@ html, body {
 /* Small kbd shortcut chip */
 kbd {
   font-family: var(--f-mono);
-  font-size: 10px;
-  padding: 1px 5px;
+  font-size: var(--fs-10);
+  line-height: 1;
+  padding: 2px 5px;
   border: 1px solid var(--border-2);
-  border-radius: 4px;
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
   background: var(--bg-2);
-  color: var(--text-2);
+  color: var(--text-1);
+  font-feature-settings: "tnum";
 }
 
 /* Live pulse dot */

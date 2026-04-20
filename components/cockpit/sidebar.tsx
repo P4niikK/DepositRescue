@@ -28,27 +28,36 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-12 hidden h-[calc(100vh-3rem)] w-56 shrink-0 flex-col gap-4 border-r border-[var(--border-1)] bg-[var(--bg-0)] p-3 lg:flex">
+    <aside
+      aria-label="Workspace sidebar"
+      className="sticky top-12 hidden h-[calc(100vh-3rem)] w-56 shrink-0 flex-col gap-4 border-r border-[var(--border-1)] bg-[var(--bg-0)] p-3 lg:flex"
+    >
       <SectionLabel>Workspace</SectionLabel>
-      <nav className="flex flex-col gap-0.5">
+      <nav aria-label="Primary" className="flex flex-col gap-0.5">
         {NAV.map((it) => {
           const active = pathname === it.href || pathname.startsWith(it.href + "/");
           return (
             <Link
               key={it.href}
               href={it.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "group flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[12px] transition",
+                "group flex h-8 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-[12px] transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--amber)]",
                 active
                   ? "bg-[var(--bg-2)] text-[var(--text-0)]"
                   : "text-[var(--text-2)] hover:bg-[var(--bg-1)] hover:text-[var(--text-1)]"
               )}
             >
-              <span className={active ? "text-[var(--amber)]" : "text-[var(--text-3)] group-hover:text-[var(--text-2)]"}>
+              <span
+                aria-hidden="true"
+                className={active ? "text-[var(--amber)]" : "text-[var(--text-3)] group-hover:text-[var(--text-2)]"}
+              >
                 {it.icon}
               </span>
               <span className="flex-1">{it.label}</span>
-              {it.live && <span className="pulse-dot" />}
+              {it.live && (
+                <span className="pulse-dot" aria-label="actividad en vivo" role="status" />
+              )}
               {!it.live && it.badge !== undefined && it.badge !== null && (
                 <span className="rounded bg-[var(--bg-2)] px-1.5 font-mono text-[10px] text-[var(--text-3)]">
                   {it.badge}
@@ -81,9 +90,11 @@ function SectionLabel({ children }: { children: ReactNode }) {
 }
 
 function PinnedItem({ children }: { children: ReactNode }) {
+  // Presentational only for now; no click handler, so no hover affordance to avoid
+  // signaling it's interactive.
   return (
-    <div className="flex h-7 items-center gap-2.5 rounded-md px-2.5 text-[11px] text-[var(--text-2)] hover:bg-[var(--bg-1)]">
-      <Pin size={12} className="text-[var(--text-3)]" />
+    <div className="flex h-7 items-center gap-2.5 rounded-md px-2.5 text-[11px] text-[var(--text-2)]">
+      <Pin size={12} className="text-[var(--text-3)]" aria-hidden="true" />
       <span className="truncate">{children}</span>
     </div>
   );

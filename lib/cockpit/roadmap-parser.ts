@@ -96,10 +96,13 @@ export function parseRoadmap(): ParsedRoadmap {
       continue;
     }
 
-    // Task line (allow any leading spaces for sub-items).
-    const taskMatch = line.match(/^\s*-\s*\[( |x|X)\]\s*(.+)$/);
+    // Task line. Tolerates standard GFM checkboxes ("- [ ]", "- [x]") plus
+    // the audit-added priority tags ("- [P1]", "- [P2]", "- [P3]", "- [cut]",
+    // "- [stretch]"). Anything that isn't "x"/"X" counts as pending.
+    const taskMatch = line.match(/^\s*-\s*\[([^\]]{1,10})\]\s*(.+)$/);
     if (taskMatch) {
-      const done = taskMatch[1].toLowerCase() === "x";
+      const marker = taskMatch[1].trim().toLowerCase();
+      const done = marker === "x";
       const text = taskMatch[2].trim();
       current.tasks.push({ done, text, owner: currentOwner });
       current.total += 1;

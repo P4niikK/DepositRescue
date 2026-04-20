@@ -8,6 +8,8 @@ export const WHO_HEADER = "X-Cockpit-Who";
 export const WHO_COOKIE = "dr_who";
 export const WHO_STORAGE_KEY = "dr_who";
 
+const WHO_COOKIE_RE = new RegExp(`(?:^|;\\s*)${WHO_COOKIE}=(matu|feli)(?:;|$)`);
+
 export function isWho(v: unknown): v is UserId {
   return v === "matu" || v === "feli";
 }
@@ -18,7 +20,7 @@ export function whoFromRequest(req: Request): UserId {
   if (isWho(header)) return header;
 
   const cookie = req.headers.get("cookie") || "";
-  const match = cookie.match(new RegExp(`${WHO_COOKIE}=(matu|feli)`));
+  const match = cookie.match(WHO_COOKIE_RE);
   if (match && isWho(match[1])) return match[1];
 
   const env = process.env.DR_JOURNAL_AUTHOR;

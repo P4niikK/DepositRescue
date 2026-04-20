@@ -42,7 +42,7 @@ export default function AskPage() {
       const { asks } = (await res.json()) as { asks: Ask[] };
       setHistory(asks);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "load failed");
+      setError(e instanceof Error ? e.message : "no pude cargar el historial");
     }
   }, [fetchAs]);
 
@@ -71,7 +71,7 @@ export default function AskPage() {
       setPrompt("");
       await loadHistory();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "ask failed");
+      setError(e instanceof Error ? e.message : "no pude enviar el ask");
     } finally {
       setSubmitting(false);
     }
@@ -85,7 +85,7 @@ export default function AskPage() {
         <div>
           <h1 className="text-[22px] font-semibold text-[var(--text-0)]">Ask the team</h1>
           <p className="font-mono text-[11px] text-[var(--text-3)]">
-            async · sin rondas · respuestas en paralelo · {history.length} en historial
+            async · sin rondas · respuestas en paralelo · {history.length} en history
           </p>
         </div>
         <button
@@ -101,13 +101,13 @@ export default function AskPage() {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={2}
-          placeholder="Hacé una pregunta corta…"
+          placeholder="Pregunta corta y concreta · ej: ¿vale la pena meter Redis para esto?"
           className="w-full resize-none bg-transparent text-[13.5px] text-[var(--text-0)] placeholder:text-[var(--text-3)] focus:outline-none"
           disabled={submitting}
         />
         <div className="space-y-2">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-3)]">
-            EXPERTOS · elegí 1 a 5
+            EXPERTS · elegí 1 a 5
           </div>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
             {Object.values(EXPERTS).map((ex) => {
@@ -152,7 +152,7 @@ export default function AskPage() {
               className="h-3.5 w-3.5 accent-[var(--amber)]"
               disabled={submitting}
             />
-            Síntesis al final
+            Sintetizar al final
           </label>
           <button
             onClick={submit}
@@ -163,7 +163,7 @@ export default function AskPage() {
               <>pensando…</>
             ) : (
               <>
-                <Send size={11} /> Preguntar a {selected.length}
+                <Send size={11} /> Ask {selected.length} {selected.length === 1 ? "expert" : "experts"}
               </>
             )}
           </button>
@@ -181,7 +181,7 @@ export default function AskPage() {
       {history.length > 1 && (
         <section className="space-y-2">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-3)]">
-            HISTORIAL
+            HISTORY
           </div>
           {history
             .filter((a) => a.id !== current?.id)

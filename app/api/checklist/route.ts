@@ -22,14 +22,24 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    const category = body.category?.trim();
-    const title = body.title?.trim();
-    const tags: string[] = Array.isArray(body.tags) ? body.tags : [];
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
+  }
+  try {
+    const category = typeof body.category === "string" ? body.category.trim() : "";
+    const title = typeof body.title === "string" ? body.title.trim() : "";
+    const tags: string[] = Array.isArray(body.tags)
+      ? body.tags.filter((t): t is string => typeof t === "string")
+      : [];
     const assignee = body.assignee === "matu" || body.assignee === "feli" ? body.assignee : null;
     if (!category || !title) {
       return NextResponse.json({ error: "category and title required" }, { status: 400 });
+    }
+    if (title.length > 500 || category.length > 100) {
+      return NextResponse.json({ error: "title or category too long" }, { status: 400 });
     }
     const who = whoFromRequest(req);
     const { rows } = await pool.query(

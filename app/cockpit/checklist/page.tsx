@@ -31,7 +31,7 @@ export default function ChecklistPage() {
       setItems(raw);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "failed to load");
+      setError(e instanceof Error ? e.message : "no pude cargar la checklist");
     } finally {
       setLoading(false);
     }
@@ -69,7 +69,7 @@ export default function ChecklistPage() {
       setItems((prev) =>
         prev.map((p) => (p.id === it.id ? { ...p, done: !next } : p))
       );
-      setError(e instanceof Error ? e.message : "toggle failed");
+      setError(e instanceof Error ? e.message : "no se pudo marcar el item");
     }
   };
 
@@ -86,7 +86,7 @@ export default function ChecklistPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "add failed");
+      setError(e instanceof Error ? e.message : "no se pudo agregar el item");
     }
   };
 
@@ -96,7 +96,7 @@ export default function ChecklistPage() {
         <div>
           <h1 className="text-[22px] font-semibold text-[var(--text-0)]">Checklist</h1>
           <p className="font-mono text-[11px] text-[var(--text-3)]">
-            compartida · {items.length - totalDone} pendientes · {totalDone}/{items.length} listos
+            compartida · {items.length - totalDone} pendientes · {totalDone}/{items.length} done
             {loading && " · cargando…"}
           </p>
         </div>
@@ -185,7 +185,7 @@ export default function ChecklistPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") addItem(cat);
                     }}
-                    placeholder={`Agregar a ${cat.toLowerCase()}… (Enter)`}
+                    placeholder={`Nuevo item en ${cat.toLowerCase()} · Enter para agregar`}
                     className="w-full bg-transparent text-[11.5px] text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none"
                   />
                 </li>

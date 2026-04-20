@@ -10,9 +10,15 @@ import type { ExpertId } from "@/lib/cockpit/data";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
+function parseLimit(raw: string | null, def: number, max: number): number {
+  const n = parseInt(raw || "", 10);
+  if (!Number.isFinite(n) || n <= 0) return def;
+  return Math.min(n, max);
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10), 100);
+  const limit = parseLimit(searchParams.get("limit"), 30, 100);
   try {
     const { rows } = await pool.query(
       `SELECT id, created_ts, updated_ts, author, prompt, status, round, include_devil, max_rounds, data, pinned_commit
@@ -29,16 +35,31 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    const prompt: string = body.prompt?.trim();
-    const includeDevil: boolean = body.include_devil ?? true;
-    const maxRounds: number = Math.min(Math.max(body.max_rounds ?? 5, 2), 10);
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
+  }
 
-    if (!prompt || prompt.length < 5) {
-      return NextResponse.json({ error: "prompt too short" }, { status: 400 });
-    }
+  const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+  const includeDevil =
+    typeof body.include_devil === "boolean" ? body.include_devil : true;
+  const maxRoundsRaw =
+    typeof body.max_rounds === "number" && Number.isFinite(body.max_rounds)
+      ? body.max_rounds
+      : 5;
+  const maxRounds: number = Math.min(Math.max(Math.floor(maxRoundsRaw), 2), 10);
 
+  if (!prompt || prompt.length < 5) {
+    return NextResponse.json({ error: "prompt too short" }, { status: 400 });
+  }
+  if (prompt.length > 20000) {
+    return NextResponse.json({ error: "prompt too long" }, { status: 400 });
+  }
+
+  let debateId: string | null = null;
+  try {
     // 1. Orquestador elige expertos
     const { selected, reasoning } = await pickExperts(prompt);
     const expertsWithDevil: ExpertId[] = includeDevil
@@ -61,6 +82,7 @@ export async function POST(req: Request) {
       [who, prompt, includeDevil, maxRounds, initialData]
     );
     let debate = rows[0];
+    debateId = debate.id as string;
 
     // 2. Ronda 1
     const round1 = await runRound(debate, 1);
@@ -84,16 +106,33 @@ export async function POST(req: Request) {
     });
 
     if (status === "closed" && saved.data.synthesis) {
-      await postSynthesisToFeed({
-        author: saved.author,
-        kind: "debate-closed",
-        refId: saved.id,
-        headline: saved.data.synthesis.headline,
-      });
+      try {
+        await postSynthesisToFeed({
+          author: saved.author,
+          kind: "debate-closed",
+          refId: saved.id,
+          headline: saved.data.synthesis.headline,
+        });
+      } catch {
+        // feed hook is best-effort
+      }
     }
 
     return NextResponse.json({ debate: saved });
   } catch (e) {
+    if (debateId !== null) {
+      try {
+        await pool.query(
+          `UPDATE agent_debates
+             SET status = 'error', updated_ts = now(),
+                 data = jsonb_set(coalesce(data, '{}'::jsonb), '{error}', to_jsonb($1::text))
+           WHERE id = $2`,
+          [e instanceof Error ? e.message : "debate failed", debateId]
+        );
+      } catch {
+        // best effort
+      }
+    }
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "debate failed" },
       { status: 500 }

@@ -1,4 +1,6 @@
 import { Pool } from "pg";
+import type { UserId } from "./data";
+import { isWho } from "./who";
 
 // Pool is shared across hot-reload cycles in dev.
 declare global {
@@ -29,5 +31,5 @@ function createPool() {
 export const pool = globalThis.__drPool ?? createPool();
 if (process.env.NODE_ENV !== "production") globalThis.__drPool = pool;
 
-export const AUTHOR =
-  (process.env.DR_JOURNAL_AUTHOR as "matu" | "feli") || "matu";
+const envAuthor = process.env.DR_JOURNAL_AUTHOR;
+export const AUTHOR: UserId = isWho(envAuthor) ? envAuthor : "matu";
