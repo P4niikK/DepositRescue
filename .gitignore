@@ -42,6 +42,7 @@ desktop.ini
 # Claude Code local settings (may include machine-specific paths)
 .claude/settings.local.json
 .claude/*.local.*
+.claude/worktrees/
 
 # Temp / scratch
 tmp/
